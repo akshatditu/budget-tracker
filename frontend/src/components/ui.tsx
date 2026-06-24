@@ -1,8 +1,23 @@
-import { useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
-import { money } from "../lib/format";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+} from "react";
+import { X, type LucideIcon } from "lucide-react";
+import { money, type Numeric } from "../lib/format";
 
-export function Card({ title, action, children, className = "" }) {
+interface CardProps {
+  title?: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}
+
+export function Card({ title, action, children, className = "" }: CardProps) {
   return (
     <div className={`rounded-xl border border-line bg-surface shadow-sm ${className}`}>
       {(title || action) && (
@@ -16,7 +31,15 @@ export function Card({ title, action, children, className = "" }) {
   );
 }
 
-export function KpiCard({ label, value, sub, accent = "var(--color-brand)", icon: Icon }) {
+interface KpiCardProps {
+  label: ReactNode;
+  value: ReactNode;
+  sub?: ReactNode;
+  accent?: string;
+  icon?: LucideIcon;
+}
+
+export function KpiCard({ label, value, sub, accent = "var(--color-brand)", icon: Icon }: KpiCardProps) {
   return (
     <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
       <div className="flex items-center justify-between">
@@ -33,7 +56,13 @@ export function KpiCard({ label, value, sub, accent = "var(--color-brand)", icon
   );
 }
 
-export function ProgressBar({ value, max, color = "var(--color-brand)" }) {
+interface ProgressBarProps {
+  value: number;
+  max: number;
+  color?: string;
+}
+
+export function ProgressBar({ value, max, color = "var(--color-brand)" }: ProgressBarProps) {
   const ratio = max > 0 ? Math.min(value / max, 1) : 0;
   const over = max > 0 && value > max;
   return (
@@ -46,12 +75,13 @@ export function ProgressBar({ value, max, color = "var(--color-brand)" }) {
   );
 }
 
-const STATUS_STYLE = {
+const STATUS_STYLE: Record<string, string> = {
   OK: "bg-emerald-100 text-emerald-700",
   Watch: "bg-amber-100 text-amber-700",
   Over: "bg-red-100 text-red-700",
 };
-export function StatusChip({ status }) {
+
+export function StatusChip({ status }: { status: string }) {
   return (
     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[status] || "bg-slate-100 text-slate-600"}`}>
       {status}
@@ -59,8 +89,14 @@ export function StatusChip({ status }) {
   );
 }
 
-export function Button({ variant = "primary", className = "", ...props }) {
-  const styles = {
+type ButtonVariant = "primary" | "ghost" | "outline" | "danger";
+
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant;
+}
+
+export function Button({ variant = "primary", className = "", ...props }: ButtonProps) {
+  const styles: Record<ButtonVariant, string> = {
     primary: "bg-brand text-white hover:opacity-90",
     ghost: "text-muted hover:bg-canvas",
     outline: "border border-line text-ink hover:bg-canvas",
@@ -74,7 +110,14 @@ export function Button({ variant = "primary", className = "", ...props }) {
   );
 }
 
-export function Modal({ open, onClose, title, children }) {
+interface ModalProps {
+  open: boolean;
+  onClose: () => void;
+  title: ReactNode;
+  children: ReactNode;
+}
+
+export function Modal({ open, onClose, title, children }: ModalProps) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
@@ -89,11 +132,18 @@ export function Modal({ open, onClose, title, children }) {
   );
 }
 
+interface EditableNumberProps {
+  value: Numeric;
+  onCommit: (value: number) => void;
+  className?: string;
+  align?: "left" | "right" | "center";
+}
+
 /** Inline-editable currency cell. Commits on blur / Enter. */
-export function EditableNumber({ value, onCommit, className = "", align = "right" }) {
+export function EditableNumber({ value, onCommit, className = "", align = "right" }: EditableNumberProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(value ?? 0));
-  const ref = useRef(null);
+  const ref = useRef<HTMLInputElement>(null);
 
   useEffect(() => setDraft(String(value ?? 0)), [value]);
   useEffect(() => { if (editing) ref.current?.select(); }, [editing]);
@@ -132,7 +182,7 @@ export function EditableNumber({ value, onCommit, className = "", align = "right
   );
 }
 
-export function Field({ label, children }) {
+export function Field({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <label className="block">
       <span className="mb-1 block text-xs font-medium text-muted">{label}</span>
@@ -141,7 +191,7 @@ export function Field({ label, children }) {
   );
 }
 
-export function Input(props) {
+export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
@@ -150,7 +200,7 @@ export function Input(props) {
   );
 }
 
-export function Select(props) {
+export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
       {...props}
@@ -159,7 +209,14 @@ export function Select(props) {
   );
 }
 
-export function EmptyState({ icon: Icon, title, hint, action }) {
+interface EmptyStateProps {
+  icon?: LucideIcon;
+  title: ReactNode;
+  hint?: ReactNode;
+  action?: ReactNode;
+}
+
+export function EmptyState({ icon: Icon, title, hint, action }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-line bg-surface px-6 py-12 text-center">
       {Icon && <Icon size={32} className="mb-3 text-muted" />}

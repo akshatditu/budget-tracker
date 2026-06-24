@@ -82,14 +82,17 @@ def dashboard(year: int, db: Session = Depends(get_db), user: User = Depends(get
     elapsed = rollup.elapsed_months(by.year)
 
     section_split = [
-        {"name": s["name"], "spent": s["totals"]["spent"], "revised": s["totals"]["revised"], "current": s["totals"]["current"]}
+        {"name": s["name"], "kind": s["kind"], "spent": s["totals"]["spent"], "revised": s["totals"]["revised"], "current": s["totals"]["current"]}
         for s in roll["sections"]
     ]
+    spending_sections = [s["name"] for s in roll["sections"] if s["kind"] != "investment"]
+    investment_sections = [s["name"] for s in roll["sections"] if s["kind"] == "investment"]
     monthly_trend = [
         {
             "month": rollup.MONTH_NAMES[m - 1],
             "budget": sum(roll["budget_grid"][s["name"]][m - 1] for s in roll["sections"]),
-            "spent": sum(roll["spend_grid"][s["name"]][m - 1] for s in roll["sections"]),
+            "spent": sum(roll["spend_grid"][n][m - 1] for n in spending_sections),
+            "invested": sum(roll["spend_grid"][n][m - 1] for n in investment_sections),
             "income": roll["income_by_month"][m - 1],
         }
         for m in rollup.MONTHS
@@ -103,6 +106,7 @@ def dashboard(year: int, db: Session = Depends(get_db), user: User = Depends(get
             "income": income_total,
             "annual_plan": roll["totals"]["annual_plan"],
             "spent": spent_total,
+            "invested": roll["totals"]["invested"],
             "current": roll["totals"]["current"],
             "remaining_in_bank": chain[elapsed - 1]["carry_out"] if elapsed > 0 else 0.0,
             "elapsed_months": elapsed,

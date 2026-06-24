@@ -55,6 +55,8 @@ class Category(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(80))
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    # "spending" (consumed) or "investment" (retained wealth, never shown as spent).
+    kind: Mapped[str] = mapped_column(String(20), default="spending", server_default="spending")
 
     subcategories: Mapped[list[Subcategory]] = relationship(
         back_populates="category", cascade="all, delete-orphan"

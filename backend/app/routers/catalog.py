@@ -27,7 +27,7 @@ def list_categories(db: Session = Depends(get_db), user: User = Depends(get_curr
 
 @router.post("/categories", response_model=CategoryOut, status_code=201)
 def create_category(payload: CategoryCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    cat = Category(user_id=user.id, name=payload.name, sort_order=payload.sort_order)
+    cat = Category(user_id=user.id, name=payload.name, sort_order=payload.sort_order, kind=payload.kind)
     db.add(cat)
     db.commit()
     db.refresh(cat)

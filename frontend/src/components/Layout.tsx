@@ -2,12 +2,21 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, CalendarDays, TableProperties, SlidersHorizontal,
   Receipt, Wallet, Settings as SettingsIcon, ChevronLeft, ChevronRight,
+  type LucideIcon,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useApp } from "../lib/AppContext";
 import { useYears, useCreateYear } from "../api/hooks";
 import { MONTH_NAMES } from "../lib/format";
 
-const NAV = [
+interface NavItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  end?: boolean;
+}
+
+const NAV: NavItem[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/month", label: "Month", icon: CalendarDays },
   { to: "/rollup", label: "Annual Rollup", icon: TableProperties },
@@ -24,7 +33,7 @@ function YearMonthBar() {
   const { pathname } = useLocation();
   const showMonth = pathname.startsWith("/month");
 
-  const ensureYear = async (y) => {
+  const ensureYear = async (y: number) => {
     if (!years.find((it) => it.year === y)) await createYear.mutateAsync({ year: y });
     setYear(y);
   };
@@ -55,7 +64,7 @@ function YearMonthBar() {
   );
 }
 
-export default function Layout({ children }) {
+export default function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-full">
       <aside className="flex w-56 shrink-0 flex-col border-r border-line bg-surface">

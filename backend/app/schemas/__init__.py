@@ -43,16 +43,19 @@ class CategoryOut(ORMModel):
     id: int
     name: str
     sort_order: int
+    kind: str
 
 
 class CategoryCreate(BaseModel):
     name: str
     sort_order: int = 0
+    kind: str = "spending"
 
 
 class CategoryUpdate(BaseModel):
     name: Optional[str] = None
     sort_order: Optional[int] = None
+    kind: Optional[str] = None
 
 
 class SubcategoryOut(ORMModel):

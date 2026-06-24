@@ -1,17 +1,23 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Plus, Trash2, Wallet } from "lucide-react";
 import { useApp } from "../lib/AppContext";
 import { useIncomes, useIncomeMutations } from "../api/hooks";
 import { money, MONTH_NAMES, MONTH_SHORT } from "../lib/format";
 import { Card, Button, Input, Select, Field, EmptyState } from "../components/ui";
 
+interface IncomeForm {
+  month: number | string;
+  source: string;
+  amount: string;
+}
+
 export default function Income() {
   const { year } = useApp();
   const { data: incomes = [] } = useIncomes(year);
   const { create, remove } = useIncomeMutations(year);
-  const [form, setForm] = useState({ month: new Date().getMonth() + 1, source: "Salary", amount: "" });
+  const [form, setForm] = useState<IncomeForm>({ month: new Date().getMonth() + 1, source: "Salary", amount: "" });
 
-  const submit = (e) => {
+  const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!form.amount) return;
     create.mutate(

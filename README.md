@@ -18,6 +18,7 @@ rolls up **Set Aside** (budgeted-but-unspent) + **Spent** = **Current**.
 ```bash
 docker compose up -d
 ```
+
 (Postgres is exposed on host port **5433**.)
 
 ### 2. Backend

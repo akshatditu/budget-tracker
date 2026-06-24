@@ -3,10 +3,10 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line,
 } from "recharts";
-import { Wallet, Target, Receipt, PiggyBank, ArrowRight } from "lucide-react";
+import { Wallet, Target, Receipt, PiggyBank, TrendingUp, ArrowRight } from "lucide-react";
 import { useApp } from "../lib/AppContext";
 import { useDashboard } from "../api/hooks";
-import { money, moneyCompact, pct, sectionColor } from "../lib/format";
+import { money, moneyCompact, moneyChart, pct, sectionColor } from "../lib/format";
 import { Card, KpiCard, StatusChip } from "../components/ui";
 
 export default function Dashboard() {
@@ -15,7 +15,8 @@ export default function Dashboard() {
 
   if (isLoading || !data) return <p className="text-sm text-muted">Loading…</p>;
   const k = data.kpis;
-  const pie = data.section_split.filter((s) => s.spent > 0);
+  // Investments are retained wealth, so they don't belong in the "spend" pie.
+  const pie = data.section_split.filter((s) => s.kind !== "investment" && s.spent > 0);
 
   return (
     <div className="space-y-6">
@@ -26,11 +27,12 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <KpiCard label="Income (YTD)" value={money(k.income)} icon={Wallet} accent="var(--color-needs)" />
         <KpiCard label="Annual Plan" value={money(k.annual_plan)} icon={Target} accent="var(--color-brand)" />
         <KpiCard label="Spent (YTD)" value={money(k.spent)} sub={`Current incl. set-aside ${money(k.current)}`} icon={Receipt} accent="var(--color-wants)" />
-        <KpiCard label="In Bank" value={money(k.remaining_in_bank)} sub={`After ${k.elapsed_months} mo`} icon={PiggyBank} accent="var(--color-investments)" />
+        <KpiCard label="Invested (YTD)" value={money(k.invested)} icon={TrendingUp} accent="var(--color-investments)" />
+        <KpiCard label="In Bank" value={money(k.remaining_in_bank)} sub={`Incl. invested · after ${k.elapsed_months} mo`} icon={PiggyBank} accent="var(--color-investments)" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -43,7 +45,7 @@ export default function Dashboard() {
                 <Pie data={pie} dataKey="spent" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={2}>
                   {pie.map((s) => <Cell key={s.name} fill={sectionColor(s.name)} />)}
                 </Pie>
-                <Tooltip formatter={(v) => money(v)} />
+                <Tooltip formatter={moneyChart} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -56,10 +58,11 @@ export default function Dashboard() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-line)" />
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
               <YAxis tickFormatter={moneyCompact} tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(v) => money(v)} />
+              <Tooltip formatter={moneyChart} />
               <Legend />
               <Line type="monotone" dataKey="budget" stroke="var(--color-brand)" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="spent" stroke="var(--color-wants)" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="invested" stroke="var(--color-investments)" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="income" stroke="var(--color-needs)" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
@@ -73,7 +76,7 @@ export default function Dashboard() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-line)" />
               <XAxis dataKey="section" tick={{ fontSize: 12 }} />
               <YAxis tickFormatter={moneyCompact} tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(v) => money(v)} />
+              <Tooltip formatter={moneyChart} />
               <Legend />
               <Bar dataKey="annual_plan" name="Annual plan" fill="var(--color-line)" radius={[4, 4, 0, 0]} />
               <Bar dataKey="ytd_spent" name="YTD spent" fill="var(--color-brand)" radius={[4, 4, 0, 0]} />

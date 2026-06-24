@@ -134,6 +134,7 @@ def month_view(db: Session, by: BudgetYear, user, month: int) -> dict:
             {
                 "category_id": cat.id,
                 "name": cat.name,
+                "kind": cat.kind,
                 "items": items,
                 "totals": {
                     "initial": t_initial,
@@ -146,7 +147,9 @@ def month_view(db: Session, by: BudgetYear, user, month: int) -> dict:
 
     income = incomes.get(month, 0.0)
     budget_total = sum(section_totals.values())
-    total_spent = sum(s["totals"]["spent"] for s in sections)
+    # Investments are retained wealth: kept out of "spent" and not subtracted from the bank.
+    total_spent = sum(s["totals"]["spent"] for s in sections if s["kind"] != "investment")
+    total_invested = sum(s["totals"]["spent"] for s in sections if s["kind"] == "investment")
 
     return {
         "year": by.year,
@@ -157,6 +160,7 @@ def month_view(db: Session, by: BudgetYear, user, month: int) -> dict:
             "income": income,
             "budget_total": budget_total,
             "spent": total_spent,
+            "invested": total_invested,
             "section_totals": section_totals,
             "remaining_in_bank": income - total_spent,
         },
@@ -211,7 +215,7 @@ def annual_rollup(db: Session, by: BudgetYear, user) -> dict:
                 sec_month_budget[i] += budgets.get((sub.id, m), (0.0, 0.0))[1]
         spend_grid[cat.name] = sec_month_spend
         budget_grid[cat.name] = sec_month_budget
-        sections.append({"category_id": cat.id, "name": cat.name, "items": items, "totals": sec_annual})
+        sections.append({"category_id": cat.id, "name": cat.name, "kind": cat.kind, "items": items, "totals": sec_annual})
 
         ytd_budget = sum(sec_month_budget[:year_elapsed])
         ytd_spent = sum(sec_month_spend[:year_elapsed])
@@ -246,8 +250,10 @@ def annual_rollup(db: Session, by: BudgetYear, user) -> dict:
         "plan_vs_actual": plan_vs_actual,
         "totals": {
             "annual_plan": sum(s["totals"]["revised"] for s in sections),
-            "spent": sum(s["totals"]["spent"] for s in sections),
-            "current": sum(s["totals"]["current"] for s in sections),
+            # Spent/current cover consumption only; investments are retained wealth.
+            "spent": sum(s["totals"]["spent"] for s in sections if s["kind"] != "investment"),
+            "current": sum(s["totals"]["current"] for s in sections if s["kind"] != "investment"),
+            "invested": sum(s["totals"]["spent"] for s in sections if s["kind"] == "investment"),
             "income": income_total,
         },
     }

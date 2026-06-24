@@ -13,14 +13,18 @@ from __future__ import annotations
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import BudgetYear, MonthlySetting, Transaction
+from app.models import BudgetYear, Category, MonthlySetting, Subcategory, Transaction
 from app.services.rollup import MONTH_NAMES, MONTHS, f, income_by_month
 
 
-def _spent_by_month(db: Session, year_id: int) -> dict[int, float]:
+def _by_month(db: Session, year_id: int, *, investment: bool) -> dict[int, float]:
+    """Sum transactions per month, filtered by whether their category is an investment."""
+    op = Category.kind == "investment" if investment else Category.kind != "investment"
     rows = db.execute(
         select(func.extract("month", Transaction.txn_date), func.sum(Transaction.amount))
-        .where(Transaction.budget_year_id == year_id)
+        .join(Subcategory, Subcategory.id == Transaction.subcategory_id)
+        .join(Category, Category.id == Subcategory.category_id)
+        .where(Transaction.budget_year_id == year_id, op)
         .group_by(func.extract("month", Transaction.txn_date))
     ).all()
     return {int(m): f(total) for m, total in rows}
@@ -28,7 +32,9 @@ def _spent_by_month(db: Session, year_id: int) -> dict[int, float]:
 
 def carry_forward_chain(db: Session, by: BudgetYear) -> list[dict]:
     incomes = income_by_month(db, by.id)
-    spent = _spent_by_month(db, by.id)
+    # Investment money is retained wealth, so it doesn't drain the carry-forward pool.
+    spent = _by_month(db, by.id, investment=False)
+    invested = _by_month(db, by.id, investment=True)
 
     opening = db.scalars(
         select(MonthlySetting.opening_carry_forward).where(
@@ -41,6 +47,7 @@ def carry_forward_chain(db: Session, by: BudgetYear) -> list[dict]:
     for m in MONTHS:
         inc = incomes.get(m, 0.0)
         sp = spent.get(m, 0.0)
+        inv = invested.get(m, 0.0)
         net = inc - sp
         carry_out = carry_in + net
         chain.append(
@@ -50,6 +57,7 @@ def carry_forward_chain(db: Session, by: BudgetYear) -> list[dict]:
                 "carry_in": carry_in,
                 "income": inc,
                 "spent": sp,
+                "invested": inv,
                 "net": net,
                 "carry_out": carry_out,
             }
@@ -62,4 +70,4 @@ def carry_forward_for_month(db: Session, by: BudgetYear, month: int) -> dict:
     for row in carry_forward_chain(db, by):
         if row["month"] == month:
             return row
-    return {"month": month, "carry_in": 0.0, "income": 0.0, "spent": 0.0, "net": 0.0, "carry_out": 0.0}
+    return {"month": month, "carry_in": 0.0, "income": 0.0, "spent": 0.0, "invested": 0.0, "net": 0.0, "carry_out": 0.0}

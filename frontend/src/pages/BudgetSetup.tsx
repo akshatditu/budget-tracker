@@ -6,6 +6,7 @@ import {
 } from "../api/hooks";
 import { money, sectionColor } from "../lib/format";
 import { Card, EditableNumber, Button, Input, Modal, Field } from "../components/ui";
+import type { AnnualBudgetRow } from "../types/api";
 
 export default function BudgetSetup() {
   const { year } = useApp();
@@ -15,12 +16,14 @@ export default function BudgetSetup() {
   const { setAnnual, setAnnualRevised } = useBudgetMutations(year);
   const { createCategory, createSubcategory, deleteSubcategory } = useCatalogMutations(year);
 
-  const [addingTo, setAddingTo] = useState(null); // category id
+  const [addingTo, setAddingTo] = useState<number | null>(null); // category id
   const [newSubName, setNewSubName] = useState("");
   const [catModal, setCatModal] = useState(false);
   const [newCatName, setNewCatName] = useState("");
 
-  const budgetBySub = Object.fromEntries(budget.map((b) => [b.subcategory_id, b]));
+  const budgetBySub: Record<number, AnnualBudgetRow> = Object.fromEntries(
+    budget.map((b): [number, AnnualBudgetRow] => [b.subcategory_id, b])
+  );
   const subsByCat = categories.map((c) => ({
     ...c,
     items: subs.filter((s) => s.category_id === c.id),
@@ -29,7 +32,7 @@ export default function BudgetSetup() {
   const grandInitial = budget.reduce((a, b) => a + b.initial_annual, 0);
   const grandRevised = budget.reduce((a, b) => a + b.revised_annual, 0);
 
-  const addSub = (catId) => {
+  const addSub = (catId: number) => {
     if (!newSubName.trim()) return;
     createSubcategory.mutate(
       { category_id: catId, name: newSubName.trim() },
@@ -72,7 +75,7 @@ export default function BudgetSetup() {
             </thead>
             <tbody>
               {cat.items.map((it) => {
-                const b = budgetBySub[it.id] || { initial_annual: 0, revised_annual: 0, ytd_revised: 0 };
+                const b = budgetBySub[it.id] ?? { initial_annual: 0, revised_annual: 0, ytd_revised: 0 };
                 return (
                   <tr key={it.id} className="border-t border-line">
                     <td className="py-1.5 font-medium">{it.name}</td>

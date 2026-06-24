@@ -1,10 +1,17 @@
-import { useMemo, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useMemo, useState, type FormEvent } from "react";
+import { Plus, Trash2, Receipt } from "lucide-react";
 import { useApp } from "../lib/AppContext";
 import { useTransactions, useSubcategories, useTransactionMutations, useCategories } from "../api/hooks";
 import { money, MONTH_NAMES } from "../lib/format";
 import { Card, Button, Input, Select, Field, EmptyState } from "../components/ui";
-import { Receipt } from "lucide-react";
+import type { TransactionFilter } from "../types/api";
+
+interface TransactionForm {
+  subcategory_id: string;
+  txn_date: string;
+  amount: string;
+  note: string;
+}
 
 export default function Transactions() {
   const { year } = useApp();
@@ -12,18 +19,27 @@ export default function Transactions() {
   const [fSub, setFSub] = useState("");
   const { data: subs = [] } = useSubcategories();
   const { data: categories = [] } = useCategories();
-  const params = {};
+  const params: TransactionFilter = {};
   if (fMonth) params.month = Number(fMonth);
   if (fSub) params.subcategory_id = Number(fSub);
   const { data: txns = [] } = useTransactions(year, params);
   const { create, remove } = useTransactionMutations(year);
 
-  const subName = useMemo(() => Object.fromEntries(subs.map((s) => [s.id, s.name])), [subs]);
-  const catName = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c.name])), [categories]);
-  const subCat = useMemo(() => Object.fromEntries(subs.map((s) => [s.id, catName[s.category_id]])), [subs, catName]);
+  const subName = useMemo(
+    () => Object.fromEntries(subs.map((s): [number, string] => [s.id, s.name])),
+    [subs]
+  );
+  const catName = useMemo(
+    () => Object.fromEntries(categories.map((c): [number, string] => [c.id, c.name])),
+    [categories]
+  );
+  const subCat = useMemo(
+    () => Object.fromEntries(subs.map((s): [number, string] => [s.id, catName[s.category_id]])),
+    [subs, catName]
+  );
 
-  const [form, setForm] = useState({ subcategory_id: "", txn_date: `${year}-01-01`, amount: "", note: "" });
-  const submit = (e) => {
+  const [form, setForm] = useState<TransactionForm>({ subcategory_id: "", txn_date: `${year}-01-01`, amount: "", note: "" });
+  const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!form.subcategory_id || !form.amount) return;
     create.mutate(

@@ -12,7 +12,7 @@ export default function Settings() {
 
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState("INR");
-  const [newYear, setNewYear] = useState(new Date().getFullYear() + 1);
+  const [newYear, setNewYear] = useState<number | string>(new Date().getFullYear() + 1);
   const [copyFrom, setCopyFrom] = useState("");
 
   useEffect(() => {

@@ -1,10 +1,19 @@
+import type { ReactNode } from "react";
 import { useApp } from "../lib/AppContext";
 import { useRollup } from "../api/hooks";
 import { money, pct, sectionColor } from "../lib/format";
 import { Card, StatusChip } from "../components/ui";
+import type { RollupSection } from "../types/api";
 
-function Grid({ title, grid, monthNames, sections }) {
-  const colTotal = (name) => grid[name].reduce((a, b) => a + b, 0);
+interface GridProps {
+  title: ReactNode;
+  grid: Record<string, number[]>;
+  monthNames: string[];
+  sections: RollupSection[];
+}
+
+function Grid({ title, grid, monthNames, sections }: GridProps) {
+  const colTotal = (name: string) => grid[name].reduce((a, b) => a + b, 0);
   return (
     <Card title={title}>
       <div className="overflow-x-auto">
@@ -84,7 +93,7 @@ export default function AnnualRollup() {
                   <tr className="text-left text-xs uppercase tracking-wide text-muted">
                     <th className="pb-1 font-medium">Item</th>
                     <th className="pb-1 text-right font-medium">Revised</th>
-                    <th className="pb-1 text-right font-medium">Spent</th>
+                    <th className="pb-1 text-right font-medium">{s.kind === "investment" ? "Invested" : "Spent"}</th>
                     <th className="pb-1 text-right font-medium">Set Aside</th>
                     <th className="pb-1 text-right font-medium">Remaining</th>
                   </tr>

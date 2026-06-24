@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Plus, Trash2, TrendingUp, PiggyBank, Wallet, Receipt } from "lucide-react";
 import { useApp } from "../lib/AppContext";
 import {
@@ -7,17 +7,25 @@ import {
 } from "../api/hooks";
 import { money, sectionColor, MONTH_NAMES } from "../lib/format";
 import {
-  Card, EditableNumber, ProgressBar, Modal, Button, Field, Input, Select, KpiCard,
+  Card, EditableNumber, ProgressBar, Modal, Button, Field, Input, KpiCard,
 } from "../components/ui";
+import type { MonthItem, MonthSection } from "../types/api";
 
-function TransactionDrawer({ year, month, sub, onClose }) {
+interface TransactionDrawerProps {
+  year: number;
+  month: number;
+  sub: MonthItem;
+  onClose: () => void;
+}
+
+function TransactionDrawer({ year, month, sub, onClose }: TransactionDrawerProps) {
   const { data: txns = [] } = useTransactions(year, { month, subcategory_id: sub.subcategory_id });
   const { create, remove } = useTransactionMutations(year);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [day, setDay] = useState(`${year}-${String(month).padStart(2, "0")}-01`);
 
-  const add = (e) => {
+  const add = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!amount) return;
     create.mutate(
@@ -51,13 +59,13 @@ function TransactionDrawer({ year, month, sub, onClose }) {
   );
 }
 
-function IncomePanel({ year, month }) {
+function IncomePanel({ year, month }: { year: number; month: number }) {
   const { data: incomes = [] } = useIncomes(year, month);
   const { create, remove } = useIncomeMutations(year);
   const [source, setSource] = useState("Salary");
   const [amount, setAmount] = useState("");
 
-  const add = (e) => {
+  const add = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!amount) return;
     create.mutate({ month, source, amount: Number(amount) }, { onSuccess: () => setAmount("") });
@@ -86,9 +94,18 @@ function IncomePanel({ year, month }) {
   );
 }
 
-function SectionTable({ section, year, month, onPickSub }) {
+interface SectionTableProps {
+  section: MonthSection;
+  year: number;
+  month: number;
+  onPickSub: (item: MonthItem) => void;
+}
+
+function SectionTable({ section, year, month, onPickSub }: SectionTableProps) {
   const { patchMonthly } = useBudgetMutations(year);
   const color = sectionColor(section.name);
+  // Investment sections hold retained wealth — show contributions as "Invested", not "Spent".
+  const spentLabel = section.kind === "investment" ? "Invested" : "Spent";
   return (
     <Card
       title={
@@ -97,7 +114,7 @@ function SectionTable({ section, year, month, onPickSub }) {
           {section.name}
         </span>
       }
-      action={<span className="text-xs text-muted">Spent {money(section.totals.spent)} / {money(section.totals.revised)}</span>}
+      action={<span className="text-xs text-muted">{spentLabel} {money(section.totals.spent)} / {money(section.totals.revised)}</span>}
     >
       <table className="w-full text-sm">
         <thead>
@@ -105,7 +122,7 @@ function SectionTable({ section, year, month, onPickSub }) {
             <th className="pb-2 font-medium">Item</th>
             <th className="pb-2 text-right font-medium">Initial</th>
             <th className="pb-2 text-right font-medium">Revised</th>
-            <th className="pb-2 text-right font-medium">Spent</th>
+            <th className="pb-2 text-right font-medium">{spentLabel}</th>
             <th className="pb-2 text-right font-medium">Remaining</th>
           </tr>
         </thead>
@@ -152,7 +169,7 @@ function SectionTable({ section, year, month, onPickSub }) {
 export default function MonthView() {
   const { year, month } = useApp();
   const { data, isLoading } = useMonth(year, month);
-  const [picked, setPicked] = useState(null);
+  const [picked, setPicked] = useState<MonthItem | null>(null);
 
   if (isLoading || !data) return <p className="text-sm text-muted">Loading…</p>;
   const s = data.summary;
@@ -187,6 +204,7 @@ export default function MonthView() {
             ))}
             <div className="flex justify-between border-t border-line pt-2"><dt className="text-muted">Budget total</dt><dd className="font-semibold">{money(s.budget_total)}</dd></div>
             <div className="flex justify-between"><dt className="text-muted">Spent</dt><dd className="font-semibold">{money(s.spent)}</dd></div>
+            <div className="flex justify-between"><dt className="text-muted">Invested</dt><dd className="font-semibold">{money(s.invested)}</dd></div>
             <div className="flex justify-between"><dt className="text-muted">Income</dt><dd className="font-semibold">{money(s.income)}</dd></div>
             <div className="flex justify-between"><dt className="text-muted">Remaining in bank</dt><dd className={`font-semibold ${s.remaining_in_bank < 0 ? "text-red-600" : "text-emerald-600"}`}>{money(s.remaining_in_bank)}</dd></div>
           </dl>
@@ -196,6 +214,7 @@ export default function MonthView() {
             <div className="flex justify-between"><dt className="text-muted">From last month</dt><dd className="font-medium">{money(s.carry_forward.carry_in)}</dd></div>
             <div className="flex justify-between"><dt className="text-muted">+ Income</dt><dd className="font-medium">{money(s.carry_forward.income)}</dd></div>
             <div className="flex justify-between"><dt className="text-muted">− Spent</dt><dd className="font-medium">{money(s.carry_forward.spent)}</dd></div>
+            <div className="flex justify-between"><dt className="text-muted">Invested (kept)</dt><dd className="font-medium">{money(s.carry_forward.invested)}</dd></div>
             <div className="flex justify-between border-t border-line pt-2"><dt className="text-muted">Net carry forward</dt><dd className={`font-semibold ${s.carry_forward.carry_out < 0 ? "text-red-600" : "text-emerald-600"}`}>{money(s.carry_forward.carry_out)}</dd></div>
           </dl>
         </Card>

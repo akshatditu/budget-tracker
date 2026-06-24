@@ -24,6 +24,9 @@ STRUCTURE: dict[str, list[str]] = {
     "Investments": ["SIPs", "Anjali Study", "Car"],
 }
 
+# Sections whose money is retained wealth (invested), never shown as spent.
+CATEGORY_KINDS: dict[str, str] = {"Investments": "investment"}
+
 
 def seed() -> None:
     db = SessionLocal()
@@ -36,13 +39,16 @@ def seed() -> None:
             print(f"Created user {user.email} (id={user.id})")
 
         for cat_order, (cat_name, subs) in enumerate(STRUCTURE.items()):
+            kind = CATEGORY_KINDS.get(cat_name, "spending")
             cat = db.scalars(
                 select(Category).where(Category.user_id == user.id, Category.name == cat_name)
             ).first()
             if cat is None:
-                cat = Category(user_id=user.id, name=cat_name, sort_order=cat_order)
+                cat = Category(user_id=user.id, name=cat_name, sort_order=cat_order, kind=kind)
                 db.add(cat)
                 db.flush()
+            elif cat.kind != kind:
+                cat.kind = kind
             for sub_order, sub_name in enumerate(subs):
                 exists = db.scalars(
                     select(Subcategory).where(
