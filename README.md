@@ -24,6 +24,7 @@ docker compose up -d
 ```bash
 cd backend
 uv venv && source .venv/bin/activate
+.\.venv\Scripts\Activate.ps1 # for Windows
 uv pip install -e .
 cp .env.example .env            # defaults already point at localhost:5433
 alembic upgrade head            # create tables

@@ -81,6 +81,10 @@ class AnnualBudgetSet(BaseModel):
     initial_amount: float
 
 
+class AnnualRevisedPatch(BaseModel):
+    revised_amount: float
+
+
 class MonthlyBudgetPatch(BaseModel):
     revised_amount: float
 

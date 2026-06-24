@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_year_or_404
 from app.models import AnnualBudget, MonthlyBudget, Subcategory, User
-from app.schemas import AnnualBudgetSet, MonthlyBudgetPatch
-from app.services.rollup import MONTHS, f
+from app.schemas import AnnualBudgetSet, AnnualRevisedPatch, MonthlyBudgetPatch
+from app.services.rollup import MONTHS, elapsed_months, f
 
 router = APIRouter(prefix="/api/years/{year}", tags=["budgets"])
 
@@ -28,15 +28,19 @@ def _get_or_create_monthly(db: Session, year_id: int, sub_id: int, month: int) -
 
 @router.get("/annual-budget")
 def get_annual_budget(year: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Per sub-item: stored annual initial + rolled-up revised (sum of months)."""
+    """Per sub-item: stored annual initial + rolled-up revised (sum of months) + YTD revised."""
     by = get_year_or_404(year, db, user)
+    current_month = elapsed_months(year)
     annuals = {
         ab.subcategory_id: f(ab.initial_amount)
         for ab in db.scalars(select(AnnualBudget).where(AnnualBudget.budget_year_id == by.id))
     }
     revised_sum: dict[int, float] = {}
+    ytd_revised_sum: dict[int, float] = {}
     for mb in db.scalars(select(MonthlyBudget).where(MonthlyBudget.budget_year_id == by.id)):
         revised_sum[mb.subcategory_id] = revised_sum.get(mb.subcategory_id, 0.0) + f(mb.revised_amount)
+        if mb.month <= current_month:
+            ytd_revised_sum[mb.subcategory_id] = ytd_revised_sum.get(mb.subcategory_id, 0.0) + f(mb.revised_amount)
 
     subs = db.scalars(
         select(Subcategory).where(Subcategory.user_id == user.id, Subcategory.archived.is_(False))
@@ -48,6 +52,7 @@ def get_annual_budget(year: int, db: Session = Depends(get_db), user: User = Dep
             "name": s.name,
             "initial_annual": annuals.get(s.id, 0.0),
             "revised_annual": revised_sum.get(s.id, 0.0),
+            "ytd_revised": ytd_revised_sum.get(s.id, 0.0),
         }
         for s in subs
     ]
@@ -103,6 +108,43 @@ def set_annual_budget(
 
     db.commit()
     return {"subcategory_id": subcategory_id, "initial_annual": payload.initial_amount, "per_month": per_month}
+
+
+@router.patch("/annual-budget/{subcategory_id}/revised")
+def set_annual_revised_budget(
+    year: int,
+    subcategory_id: int,
+    payload: AnnualRevisedPatch,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Set the annual revised budget, distributing the remainder after YTD across future months."""
+    by = get_year_or_404(year, db, user)
+    sub = db.get(Subcategory, subcategory_id)
+    if sub is None or sub.user_id != user.id:
+        raise HTTPException(404, "Subcategory not found")
+
+    current_month = elapsed_months(year)
+    ytd_revised = sum(
+        f(mb.revised_amount)
+        for mb in db.scalars(
+            select(MonthlyBudget).where(
+                MonthlyBudget.budget_year_id == by.id,
+                MonthlyBudget.subcategory_id == subcategory_id,
+                MonthlyBudget.month <= current_month,
+            )
+        )
+    )
+
+    future_months = list(range(current_month + 1, 13))
+    if future_months:
+        per_month = round((payload.revised_amount - ytd_revised) / len(future_months), 2)
+        for m in future_months:
+            mb = _get_or_create_monthly(db, by.id, subcategory_id, m)
+            mb.revised_amount = per_month
+
+    db.commit()
+    return {"subcategory_id": subcategory_id, "revised_amount": payload.revised_amount}
 
 
 @router.patch("/months/{month}/budget/{subcategory_id}")

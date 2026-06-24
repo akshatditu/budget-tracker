@@ -12,7 +12,7 @@ export default function BudgetSetup() {
   const { data: categories = [] } = useCategories();
   const { data: subs = [] } = useSubcategories();
   const { data: budget = [] } = useAnnualBudget(year);
-  const { setAnnual } = useBudgetMutations(year);
+  const { setAnnual, setAnnualRevised } = useBudgetMutations(year);
   const { createCategory, createSubcategory, deleteSubcategory } = useCatalogMutations(year);
 
   const [addingTo, setAddingTo] = useState(null); // category id
@@ -66,12 +66,13 @@ export default function BudgetSetup() {
                 <th className="pb-2 text-right font-medium">Initial annual</th>
                 <th className="pb-2 text-right font-medium">Per month</th>
                 <th className="pb-2 text-right font-medium">Revised annual</th>
+                <th className="pb-2 text-right font-medium">Revised YTD</th>
                 <th className="pb-2 w-10"></th>
               </tr>
             </thead>
             <tbody>
               {cat.items.map((it) => {
-                const b = budgetBySub[it.id] || { initial_annual: 0, revised_annual: 0 };
+                const b = budgetBySub[it.id] || { initial_annual: 0, revised_annual: 0, ytd_revised: 0 };
                 return (
                   <tr key={it.id} className="border-t border-line">
                     <td className="py-1.5 font-medium">{it.name}</td>
@@ -79,7 +80,10 @@ export default function BudgetSetup() {
                       <EditableNumber value={b.initial_annual} onCommit={(v) => setAnnual.mutate({ subcategory_id: it.id, initial_amount: v })} />
                     </td>
                     <td className="py-1.5 pr-2 text-right text-muted">{money(b.initial_annual / 12)}</td>
-                    <td className="py-1.5 pr-2 text-right font-medium">{money(b.revised_annual)}</td>
+                    <td className="py-1.5">
+                      <EditableNumber value={b.revised_annual} onCommit={(v) => setAnnualRevised.mutate({ subcategory_id: it.id, revised_amount: v })} />
+                    </td>
+                    <td className="py-1.5 pr-2 text-right text-muted">{money(b.ytd_revised)}</td>
                     <td className="py-1.5 text-right">
                       <button className="text-muted hover:text-red-600" title="Archive item" onClick={() => deleteSubcategory.mutate(it.id)}><Archive size={15} /></button>
                     </td>
@@ -88,7 +92,7 @@ export default function BudgetSetup() {
               })}
               {addingTo === cat.id && (
                 <tr className="border-t border-line">
-                  <td colSpan={5} className="py-2">
+                  <td colSpan={6} className="py-2">
                     <div className="flex gap-2">
                       <Input autoFocus value={newSubName} onChange={(e) => setNewSubName(e.target.value)} placeholder="New item name" onKeyDown={(e) => e.key === "Enter" && addSub(cat.id)} />
                       <Button onClick={() => addSub(cat.id)}>Add</Button>
@@ -98,7 +102,7 @@ export default function BudgetSetup() {
                 </tr>
               )}
               {cat.items.length === 0 && addingTo !== cat.id && (
-                <tr><td colSpan={5} className="py-3 text-center text-xs text-muted">No items yet.</td></tr>
+                <tr><td colSpan={6} className="py-3 text-center text-xs text-muted">No items yet.</td></tr>
               )}
             </tbody>
           </table>

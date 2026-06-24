@@ -68,6 +68,11 @@ export const useBudgetMutations = (year) => {
         api.put(`/years/${year}/annual-budget/${subcategory_id}`, { initial_amount }),
       onSuccess: done,
     }),
+    setAnnualRevised: useMutation({
+      mutationFn: ({ subcategory_id, revised_amount }) =>
+        api.patch(`/years/${year}/annual-budget/${subcategory_id}/revised`, { revised_amount }),
+      onSuccess: done,
+    }),
     patchMonthly: useMutation({
       mutationFn: ({ month, subcategory_id, revised_amount }) =>
         api.patch(`/years/${year}/months/${month}/budget/${subcategory_id}`, { revised_amount }),
