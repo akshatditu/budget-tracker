@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from "react";
-import { Plus, Trash2, Target, PiggyBank } from "lucide-react";
-import { useGoals, useGoalMutations, useGoalContributions } from "../api/hooks";
+import { Plus, Trash2, Target, PiggyBank, Link2, AlertTriangle } from "lucide-react";
+import { useGoals, useGoalMutations, useGoalContributions, useCategories, useSubcategories, useAnnualBudget } from "../api/hooks";
+import { useApp } from "../lib/AppContext";
 import { money, pct } from "../lib/format";
 import {
-  Card, Button, Modal, Field, Input, ProgressBar, EmptyState,
+  Card, Button, Modal, Field, Input, Select, ProgressBar, EmptyState,
 } from "../components/ui";
-import type { Goal } from "../types/api";
+import type { Goal, GoalSubcategoryLink } from "../types/api";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -20,6 +21,169 @@ function OnTrackChip({ goal }: { goal: Goal }) {
     <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">On track</span>
   ) : (
     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Behind</span>
+  );
+}
+
+function ManageLinksModal({ goal, onClose }: { goal: Goal; onClose: () => void }) {
+  const { year } = useApp();
+  const { data: allGoals = [] } = useGoals();
+  const { data: categories = [] } = useCategories();
+  const { data: subcategories = [] } = useSubcategories();
+  const { data: annualBudget = [] } = useAnnualBudget(year);
+  const { addLink, updateLink, removeLink } = useGoalMutations();
+
+  const [newSubcatId, setNewSubcatId] = useState<number | null>(null);
+  const [editWeights, setEditWeights] = useState<Record<number, string>>(() =>
+    Object.fromEntries(goal.links.map((l) => [l.id, String(l.weight)]))
+  );
+
+  // Auto-weight = goal.target_amount / subcategory.revised_annual * 100, capped at 100.
+  // Returns null when the subcategory has no annual budget set yet.
+  const calcAutoWeight = (subcatId: number | null): number | null => {
+    if (!subcatId) return null;
+    const row = annualBudget.find((r) => r.subcategory_id === subcatId);
+    if (!row || row.revised_annual <= 0) return null;
+    return Math.min(100, (goal.target_amount / row.revised_annual) * 100);
+  };
+
+  const getRevisedAnnual = (subcatId: number | null): number =>
+    annualBudget.find((r) => r.subcategory_id === subcatId)?.revised_annual ?? 0;
+
+  // Total weight per subcategory across ALL goals (for over-allocation warning).
+  const totalWeightForSubcat = (subcatId: number | null): number => {
+    if (subcatId === null) return 0;
+    return allGoals
+      .flatMap((g) => g.links)
+      .filter((l) => l.subcategory_id === subcatId)
+      .reduce((sum, l) => sum + l.weight, 0);
+  };
+
+  const linkedSubcatIds = new Set(goal.links.map((l) => l.subcategory_id));
+  const availableSubs = subcategories.filter((s) => !linkedSubcatIds.has(s.id));
+
+  const autoWeight = calcAutoWeight(newSubcatId);
+  const newSubcatRevised = getRevisedAnnual(newSubcatId);
+
+  const handleAddLink = () => {
+    if (!newSubcatId || autoWeight === null) return;
+    addLink.mutate(
+      { goalId: goal.id, subcategory_id: newSubcatId, weight: autoWeight },
+      { onSuccess: () => setNewSubcatId(null) }
+    );
+  };
+
+  const handleSaveWeight = (link: GoalSubcategoryLink) => {
+    const w = Number(editWeights[link.id]);
+    if (!w || w <= 0) return;
+    updateLink.mutate({ goalId: goal.id, linkId: link.id, weight: w });
+  };
+
+  const thisGoalTotal = goal.links.reduce((sum, l) => sum + l.weight, 0);
+
+  return (
+    <Modal open onClose={onClose} title={`Linked subcategories — ${goal.name}`}>
+      <p className="mb-3 text-sm text-muted">
+        Each linked subcategory contributes its monthly unspent budget to this goal, scaled by its weight.
+        When no links exist the goal uses manual contributions instead.
+      </p>
+
+      {goal.links.length === 0 ? (
+        <p className="py-4 text-center text-sm text-muted">No links yet — add one below.</p>
+      ) : (
+        <div className="mb-4 space-y-2">
+          {goal.links.map((link) => {
+            const total = totalWeightForSubcat(link.subcategory_id);
+            const suggested = calcAutoWeight(link.subcategory_id);
+            return (
+              <div key={link.id} className="space-y-1">
+                <div className="flex items-center gap-2 rounded-lg border border-line px-3 py-2">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{link.subcategory_name ?? "—"}</p>
+                    {suggested !== null && Math.abs(suggested - link.weight) > 0.1 && (
+                      <p className="text-xs text-muted">suggested: {suggested.toFixed(1)}%</p>
+                    )}
+                  </div>
+                  <div className="w-20">
+                    <Input
+                      type="number"
+                      className="text-right"
+                      value={editWeights[link.id] ?? String(link.weight)}
+                      onChange={(e) => setEditWeights((prev) => ({ ...prev, [link.id]: e.target.value }))}
+                    />
+                  </div>
+                  <span className="text-sm text-muted">%</span>
+                  <button
+                    className="text-xs text-brand hover:underline disabled:opacity-50"
+                    onClick={() => handleSaveWeight(link)}
+                    disabled={updateLink.isPending}
+                  >
+                    Save
+                  </button>
+                  <button
+                    className="text-muted hover:text-red-600"
+                    onClick={() => removeLink.mutate({ goalId: goal.id, linkId: link.id })}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+                {total > 100 && (
+                  <div className="flex items-center gap-1.5 rounded bg-amber-50 px-2 py-1 text-xs text-amber-700">
+                    <AlertTriangle size={12} />
+                    {link.subcategory_name} is over-allocated ({total.toFixed(0)}% across all goals).
+                    Some goals may receive less than expected.
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          <p className="text-right text-xs text-muted">
+            This goal’s total: <span className="font-medium">{thisGoalTotal.toFixed(0)}%</span>
+          </p>
+        </div>
+      )}
+
+      <div className="border-t border-line pt-4">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">Add a link</p>
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <Select
+              value={newSubcatId ?? ""}
+              onChange={(e) => setNewSubcatId(e.target.value === "" ? null : Number(e.target.value))}
+            >
+              <option value="">— Select subcategory —</option>
+              {categories.map((cat) => {
+                const subs = availableSubs.filter((s) => s.category_id === cat.id);
+                if (subs.length === 0) return null;
+                return (
+                  <optgroup key={cat.id} label={cat.name}>
+                    {subs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </optgroup>
+                );
+              })}
+            </Select>
+          </div>
+          {/* Weight is auto-calculated from goal target ÷ subcategory annual budget — read-only */}
+          <div className="flex w-28 shrink-0 items-center justify-end gap-1 rounded-lg border border-line bg-slate-50 px-3 py-2 text-sm">
+            <span className="font-medium">{autoWeight !== null ? autoWeight.toFixed(1) : "—"}</span>
+            <span className="text-muted">%</span>
+          </div>
+          <Button
+            onClick={handleAddLink}
+            disabled={!newSubcatId || autoWeight === null || addLink.isPending}
+            title={autoWeight === null ? "Set an annual budget for this subcategory first" : undefined}
+          >
+            <Plus size={16} />
+          </Button>
+        </div>
+        {newSubcatId && (
+          <p className="mt-2 text-xs text-muted">
+            {newSubcatRevised > 0
+              ? `Annual budget: ${money(newSubcatRevised)}  ·  Goal target: ${money(goal.target_amount)}  →  auto-weight: ${(autoWeight ?? 0).toFixed(1)}%`
+              : "⚠ No annual budget set for this subcategory — set one in Budget Setup first."}
+          </p>
+        )}
+      </div>
+    </Modal>
   );
 }
 
@@ -69,6 +233,9 @@ function ContributionsModal({ goal, onClose }: { goal: Goal; onClose: () => void
 function GoalCard({ goal }: { goal: Goal }) {
   const { remove } = useGoalMutations();
   const [showContribs, setShowContribs] = useState(false);
+  const [showLinks, setShowLinks] = useState(false);
+
+  const hasLinks = goal.links.length > 0;
 
   return (
     <Card
@@ -101,11 +268,33 @@ function GoalCard({ goal }: { goal: Goal }) {
             </div>
           )}
         </dl>
-        <Button variant="outline" className="w-full justify-center" onClick={() => setShowContribs(true)}>
-          <PiggyBank size={16} /> Contributions
-        </Button>
+
+        {hasLinks ? (
+          <button
+            className="flex w-full flex-wrap items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-left hover:bg-surface-hover"
+            onClick={() => setShowLinks(true)}
+            title="Manage subcategory links"
+          >
+            {goal.links.map((l) => (
+              <span key={l.id} className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-xs font-medium text-brand">
+                <Link2 size={10} />{l.subcategory_name ?? "—"} {l.weight}%
+              </span>
+            ))}
+            <span className="ml-auto text-xs text-muted">Auto-tracked</span>
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1 justify-center" onClick={() => setShowContribs(true)}>
+              <PiggyBank size={16} /> Contributions
+            </Button>
+            <Button variant="outline" className="justify-center px-3" onClick={() => setShowLinks(true)} title="Link to subcategories">
+              <Link2 size={16} />
+            </Button>
+          </div>
+        )}
       </div>
       {showContribs && <ContributionsModal goal={goal} onClose={() => setShowContribs(false)} />}
+      {showLinks && <ManageLinksModal goal={goal} onClose={() => setShowLinks(false)} />}
     </Card>
   );
 }

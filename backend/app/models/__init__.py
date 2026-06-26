@@ -13,6 +13,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     UniqueConstraint,
     func,
@@ -163,8 +164,8 @@ class MonthlySetting(Base):
 
 class Goal(Base):
     """A sinking fund / savings target. User-scoped (spans years). `saved` is never
-    stored — it is summed from the GoalContribution ledger, mirroring how `spent` is
-    summed from transactions."""
+    stored — it is summed from GoalSubcategoryLink rows (weighted subcategory remaining)
+    when any links exist, otherwise from the GoalContribution ledger."""
 
     __tablename__ = "goals"
 
@@ -177,6 +178,9 @@ class Goal(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     contributions: Mapped[list[GoalContribution]] = relationship(
+        back_populates="goal", cascade="all, delete-orphan"
+    )
+    subcat_links: Mapped[list[GoalSubcategoryLink]] = relationship(
         back_populates="goal", cascade="all, delete-orphan"
     )
 
@@ -195,6 +199,30 @@ class GoalContribution(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     goal: Mapped[Goal] = relationship(back_populates="contributions")
+
+
+class GoalSubcategoryLink(Base):
+    """Junction row linking a Goal to a Subcategory with a weight (0–100 %).
+    A goal can link to multiple subcategories; a subcategory can link to multiple
+    goals. `saved` for a goal = Σ (weight/100 × max(0, revised−spent)) per elapsed
+    month, summed across all links."""
+
+    __tablename__ = "goal_subcategory_links"
+    __table_args__ = (
+        UniqueConstraint("goal_id", "subcategory_id", name="uq_goal_subcat_link"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    goal_id: Mapped[int] = mapped_column(ForeignKey("goals.id", ondelete="CASCADE"), index=True)
+    subcategory_id: Mapped[int | None] = mapped_column(
+        ForeignKey("subcategories.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    # Percentage 0–100 (supports decimals like 33.33). Stored as plain Numeric — not
+    # encrypted, it's not a money amount.
+    weight: Mapped[float] = mapped_column(Numeric(5, 2), default=100)
+
+    goal: Mapped[Goal] = relationship(back_populates="subcat_links")
 
 
 class BalanceSnapshot(Base):

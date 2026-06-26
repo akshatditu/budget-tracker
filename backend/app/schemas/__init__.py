@@ -163,6 +163,22 @@ class MonthlySettingPatch(BaseModel):
 
 
 # ---- Goals (sinking funds) ----
+class GoalSubcategoryLinkCreate(BaseModel):
+    subcategory_id: int
+    weight: float = 100.0
+
+
+class GoalSubcategoryLinkUpdate(BaseModel):
+    weight: float
+
+
+class GoalSubcategoryLinkOut(BaseModel):
+    id: int
+    subcategory_id: Optional[int]
+    subcategory_name: Optional[str]
+    weight: float
+
+
 class GoalCreate(BaseModel):
     name: str
     target_amount: float = 0
@@ -184,6 +200,7 @@ class GoalOut(BaseModel):
     target_amount: float
     target_date: Optional[date]
     archived: bool
+    links: list[GoalSubcategoryLinkOut]
     saved: float
     remaining: float
     pct: float

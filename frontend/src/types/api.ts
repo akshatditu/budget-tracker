@@ -314,6 +314,7 @@ export interface RollupSection {
 
 export interface PlanVsActualRow {
   section: string;
+  kind: CategoryKind;
   annual_plan: number;
   ytd_budget: number;
   ytd_spent: number;
@@ -347,13 +348,28 @@ export interface Rollup {
 }
 
 // ---- Goals (sinking funds) ----
+export interface GoalSubcategoryLink {
+  id: number;
+  subcategory_id: number | null;
+  subcategory_name: string | null;
+  /** Percentage 0–100 of that subcategory's monthly unspent budget credited to this goal. */
+  weight: number;
+}
+
+export interface GoalSubcategoryLinkCreate {
+  subcategory_id: number;
+  weight: number;
+}
+
 export interface Goal {
   id: number;
   name: string;
   target_amount: number;
   target_date: string | null;
   archived: boolean;
-  /** Summed from the contributions ledger. */
+  /** Weighted subcategory links; empty → falls back to manual contributions. */
+  links: GoalSubcategoryLink[];
+  /** Weighted sum of subcategory remaining (or manual contributions when no links). */
   saved: number;
   remaining: number;
   pct: number;

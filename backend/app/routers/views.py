@@ -112,7 +112,7 @@ def dashboard(year: int, db: Session = Depends(get_db), user: User = Depends(get
             "invested": roll["totals"]["invested"],
             "current": roll["totals"]["current"],
             "overspent": roll["totals"]["overspent"],
-            "remaining_in_bank": chain[elapsed - 1]["carry_out"] if elapsed > 0 else 0.0,
+            "remaining_in_bank": (chain[elapsed - 1]["carry_out"] - roll["totals"]["invested"]) if elapsed > 0 else 0.0,
             "projected_spend": projected_spend,
             "projected_remaining_in_bank": income_total - projected_spend,
             "elapsed_months": elapsed,

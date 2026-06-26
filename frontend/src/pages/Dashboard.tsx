@@ -39,7 +39,7 @@ export default function Dashboard() {
           accent="var(--color-wants)"
         />
         <KpiCard label="Invested (YTD)" value={money(k.invested)} icon={TrendingUp} accent="var(--color-investments)" />
-        <KpiCard label="In Bank" value={money(k.remaining_in_bank)} sub={`Incl. invested · after ${k.elapsed_months} mo`} icon={PiggyBank} accent="var(--color-investments)" />
+        <KpiCard label="In Bank" value={money(k.remaining_in_bank)} sub={`Spending only · after ${k.elapsed_months} mo`} icon={PiggyBank} accent="var(--color-investments)" />
         <KpiCard
           label="Projected y/e spend"
           value={money(k.projected_spend)}

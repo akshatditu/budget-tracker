@@ -1,19 +1,25 @@
 """Sinking-fund / goal endpoints. Goals are user-scoped (they span budget years).
 
-`saved` is summed from the GoalContribution ledger in Python — amounts are encrypted
-at rest so SUM() can't run in SQL (same pattern as rollup._spent_by_subcat_month).
+`saved` is computed from GoalSubcategoryLink rows when any exist (each link
+contributes weight/100 × sum of max(0, revised−spent) over elapsed months for its
+subcategory). When no links exist the goal falls back to the manual GoalContribution
+ledger — amounts are encrypted at rest so SUM() can't run in SQL.
 """
+from datetime import date as date_type
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import get_current_user
-from app.models import Goal, GoalContribution, User
+from app.models import BudgetYear, Goal, GoalContribution, GoalSubcategoryLink, MonthlyBudget, Subcategory, Transaction, User
 from app.schemas import (
     GoalContributionCreate,
     GoalContributionOut,
     GoalCreate,
+    GoalSubcategoryLinkCreate,
+    GoalSubcategoryLinkUpdate,
     GoalUpdate,
 )
 from app.services.goals import compute_goal
@@ -29,15 +35,87 @@ def _get_goal(db: Session, user: User, goal_id: int) -> Goal:
     return goal
 
 
-def _saved(db: Session, goal_id: int) -> float:
-    rows = db.execute(
-        select(GoalContribution.amount).where(GoalContribution.goal_id == goal_id)
+def _subcat_remaining(db: Session, user_id: int, subcategory_id: int) -> float:
+    """Sum max(0, revised − spent) over all elapsed months for one subcategory."""
+    today = date_type.today()
+    budget_years = db.scalars(select(BudgetYear).where(BudgetYear.user_id == user_id)).all()
+
+    total = 0.0
+    for by in budget_years:
+        if by.year < today.year:
+            months = range(1, 13)
+        elif by.year == today.year:
+            months = range(1, today.month + 1)
+        else:
+            continue
+
+        budget_rows = {
+            row.month: f(row.revised_amount)
+            for row in db.scalars(
+                select(MonthlyBudget).where(
+                    MonthlyBudget.budget_year_id == by.id,
+                    MonthlyBudget.subcategory_id == subcategory_id,
+                )
+            ).all()
+        }
+
+        txn_rows = db.execute(
+            select(
+                func.extract("month", Transaction.txn_date).label("m"),
+                Transaction.amount,
+            ).where(
+                Transaction.budget_year_id == by.id,
+                Transaction.subcategory_id == subcategory_id,
+            )
+        ).all()
+        spent_by_month: dict[int, float] = {}
+        for m, amt in txn_rows:
+            key = int(m)
+            spent_by_month[key] = spent_by_month.get(key, 0.0) + f(amt)
+
+        for m in months:
+            remaining = budget_rows.get(m, 0.0) - spent_by_month.get(m, 0.0)
+            if remaining > 0:
+                total += remaining
+
+    return total
+
+
+def _saved_from_links(db: Session, goal: Goal) -> float:
+    """Weighted sum of subcategory remaining across all links. Falls back to manual
+    contributions when no links exist."""
+    links = db.scalars(
+        select(GoalSubcategoryLink).where(GoalSubcategoryLink.goal_id == goal.id)
     ).all()
-    return sum(f(amt) for (amt,) in rows)
+    if not links:
+        rows = db.execute(
+            select(GoalContribution.amount).where(GoalContribution.goal_id == goal.id)
+        ).all()
+        return sum(f(amt) for (amt,) in rows)
+
+    total = 0.0
+    for link in links:
+        if link.subcategory_id is None:
+            continue
+        total += (float(link.weight) / 100.0) * _subcat_remaining(db, goal.user_id, link.subcategory_id)
+    return total
+
+
+def _link_out(db: Session, link: GoalSubcategoryLink) -> dict:
+    sub = db.get(Subcategory, link.subcategory_id) if link.subcategory_id else None
+    return {
+        "id": link.id,
+        "subcategory_id": link.subcategory_id,
+        "subcategory_name": sub.name if sub else None,
+        "weight": float(link.weight),
+    }
 
 
 def _goal_dict(db: Session, goal: Goal) -> dict:
-    saved = _saved(db, goal.id)
+    saved = _saved_from_links(db, goal)
+    links = db.scalars(
+        select(GoalSubcategoryLink).where(GoalSubcategoryLink.goal_id == goal.id)
+    ).all()
     summary = compute_goal(
         target_amount=f(goal.target_amount),
         target_date=goal.target_date,
@@ -50,6 +128,7 @@ def _goal_dict(db: Session, goal: Goal) -> dict:
         "target_amount": f(goal.target_amount),
         "target_date": goal.target_date,
         "archived": goal.archived,
+        "links": [_link_out(db, lk) for lk in links],
         **summary,
     }
 
@@ -95,6 +174,80 @@ def update_goal(goal_id: int, payload: GoalUpdate, db: Session = Depends(get_db)
 def delete_goal(goal_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     goal = _get_goal(db, user, goal_id)
     db.delete(goal)
+    db.commit()
+
+
+# ---- subcategory links ----
+
+@router.get("/{goal_id}/links")
+def list_links(goal_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    _get_goal(db, user, goal_id)
+    links = db.scalars(
+        select(GoalSubcategoryLink).where(GoalSubcategoryLink.goal_id == goal_id)
+    ).all()
+    return [_link_out(db, lk) for lk in links]
+
+
+@router.post("/{goal_id}/links", status_code=201)
+def add_link(
+    goal_id: int,
+    payload: GoalSubcategoryLinkCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    goal = _get_goal(db, user, goal_id)
+    sub = db.get(Subcategory, payload.subcategory_id)
+    if sub is None or sub.user_id != user.id:
+        raise HTTPException(404, "Subcategory not found")
+    existing = db.scalars(
+        select(GoalSubcategoryLink).where(
+            GoalSubcategoryLink.goal_id == goal_id,
+            GoalSubcategoryLink.subcategory_id == payload.subcategory_id,
+        )
+    ).first()
+    if existing:
+        raise HTTPException(409, "This subcategory is already linked to this goal")
+    link = GoalSubcategoryLink(
+        user_id=user.id,
+        goal_id=goal.id,
+        subcategory_id=payload.subcategory_id,
+        weight=payload.weight,
+    )
+    db.add(link)
+    db.commit()
+    return _goal_dict(db, goal)
+
+
+@router.patch("/{goal_id}/links/{link_id}")
+def update_link(
+    goal_id: int,
+    link_id: int,
+    payload: GoalSubcategoryLinkUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    _get_goal(db, user, goal_id)
+    link = db.get(GoalSubcategoryLink, link_id)
+    if link is None or link.goal_id != goal_id or link.user_id != user.id:
+        raise HTTPException(404, "Link not found")
+    link.weight = payload.weight
+    db.commit()
+    goal = db.get(Goal, goal_id)
+    return _goal_dict(db, goal)
+
+
+@router.delete("/{goal_id}/links/{link_id}", status_code=204)
+def remove_link(
+    goal_id: int,
+    link_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    _get_goal(db, user, goal_id)
+    link = db.get(GoalSubcategoryLink, link_id)
+    if link is None or link.goal_id != goal_id or link.user_id != user.id:
+        raise HTTPException(404, "Link not found")
+    db.delete(link)
     db.commit()
 
 

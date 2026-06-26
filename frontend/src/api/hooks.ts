@@ -16,6 +16,7 @@ import type {
   GoalContribution,
   GoalContributionCreate,
   GoalCreate,
+  GoalSubcategoryLinkCreate,
   GoalUpdate,
   Income,
   IncomeCreate,
@@ -285,6 +286,21 @@ export const useGoalMutations = () => {
     removeContribution: useMutation({
       mutationFn: ({ goalId, id }: { goalId: number; id: number }) =>
         api.delete<void>(`/goals/${goalId}/contributions/${id}`),
+      onSuccess: done,
+    }),
+    addLink: useMutation({
+      mutationFn: ({ goalId, ...b }: GoalSubcategoryLinkCreate & { goalId: number }) =>
+        api.post<Goal>(`/goals/${goalId}/links`, b),
+      onSuccess: done,
+    }),
+    updateLink: useMutation({
+      mutationFn: ({ goalId, linkId, weight }: { goalId: number; linkId: number; weight: number }) =>
+        api.patch<Goal>(`/goals/${goalId}/links/${linkId}`, { weight }),
+      onSuccess: done,
+    }),
+    removeLink: useMutation({
+      mutationFn: ({ goalId, linkId }: { goalId: number; linkId: number }) =>
+        api.delete<void>(`/goals/${goalId}/links/${linkId}`),
       onSuccess: done,
     }),
   };

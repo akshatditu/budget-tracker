@@ -51,7 +51,7 @@ export default function AnnualRollup() {
     <div className="space-y-6">
       <h1 className="text-xl font-semibold">{year} Annual Rollup</h1>
 
-      <Grid title="Monthly Spend" grid={data.spend_grid} monthNames={data.month_names} sections={data.sections} />
+      <Grid title="Monthly Spend" grid={data.spend_grid} monthNames={data.month_names} sections={data.sections.filter(s => s.kind !== "investment")} />
       <Grid title="Monthly Budget (Revised)" grid={data.budget_grid} monthNames={data.month_names} sections={data.sections} />
 
       <Card title="Plan vs Actual">
@@ -75,11 +75,11 @@ export default function AnnualRollup() {
                 <td className="py-2 font-medium">{r.section}</td>
                 <td className="py-2 text-right">{money(r.annual_plan)}</td>
                 <td className="py-2 text-right text-muted">{money(r.ytd_budget)}</td>
-                <td className="py-2 text-right">{money(r.ytd_spent)}</td>
+                <td className="py-2 text-right">{r.kind === "investment" ? <span className="text-xs text-muted">(invested) </span> : null}{money(r.ytd_spent)}</td>
                 <td className="py-2 text-right text-muted">{pct(r.pct_of_ytd_budget)}</td>
                 <td className="py-2 text-right">{money(r.projected_annual)}</td>
-                <td className={`py-2 text-right ${r.projected_variance < 0 ? "text-red-600" : "text-emerald-600"}`}>{money(r.projected_variance)}</td>
-                <td className="py-2 text-right"><StatusChip status={r.status} /></td>
+                <td className={`py-2 text-right ${r.kind !== "investment" && r.projected_variance < 0 ? "text-red-600" : "text-emerald-600"}`}>{money(r.projected_variance)}</td>
+                <td className="py-2 text-right">{r.kind === "investment" ? <span className="text-muted">—</span> : <StatusChip status={r.status} />}</td>
               </tr>
             ))}
           </tbody>

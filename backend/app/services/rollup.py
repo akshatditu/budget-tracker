@@ -292,6 +292,7 @@ def annual_rollup(db: Session, by: BudgetYear, user) -> dict:
         plan_vs_actual.append(
             {
                 "section": cat.name,
+                "kind": cat.kind,
                 "annual_plan": plan,
                 "ytd_budget": ytd_budget,
                 "ytd_spent": ytd_spent,
