@@ -13,6 +13,19 @@ export interface User {
   email: string;
   display_name: string;
   currency: string;
+  /** False until the first-run onboarding wizard is completed. */
+  onboarded: boolean;
+}
+
+// ---- Onboarding ----
+export interface OnboardingSection {
+  name: string;
+  kind: CategoryKind;
+  items: string[];
+}
+
+export interface OnboardingPayload {
+  sections: OnboardingSection[];
 }
 
 export interface UserUpdate {

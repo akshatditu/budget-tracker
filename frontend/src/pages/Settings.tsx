@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useApp } from "../lib/AppContext";
 import { useMe, useUpdateMe, useYears, useCreateYear } from "../api/hooks";
 import { Card, Button, Input, Field, Select } from "../components/ui";
+import { startTour } from "../lib/tour";
 
 export default function Settings() {
   const { year, setYear } = useApp();
@@ -76,9 +77,16 @@ export default function Settings() {
         </div>
       </Card>
 
+      <Card title="Guided tour">
+        <p className="text-sm text-muted">Take the quick walkthrough of the app again.</p>
+        <div className="mt-4">
+          <Button variant="outline" onClick={() => startTour()}>Replay tour</Button>
+        </div>
+      </Card>
+
       <Card title="About">
         <p className="text-sm text-muted">
-          Budget Tracker v0.1 — sections → sub-items → monthly Initial / Revised / Spent / Remaining,
+          BudgetIQ v0.1 — sections → sub-items → monthly Initial / Revised / Spent / Remaining,
           with annual set-aside rollups and a carry-forward pool. Phase 2: login, net-worth tracker, Excel import.
         </p>
       </Card>

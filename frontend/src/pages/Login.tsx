@@ -1,12 +1,18 @@
+import { BudgetIQIcon } from "../components/Logo";
+
 export default function Login() {
   return (
     <div className="grid h-full place-items-center bg-canvas p-6">
       <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-8 text-center shadow-sm">
-        <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-brand text-lg font-bold text-white">
-          ₹
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#0F172A]">
+          <BudgetIQIcon size={38} />
         </div>
-        <h1 className="mt-4 text-lg font-semibold">Budget Tracker</h1>
-        <p className="mt-1 text-sm text-muted">Sign in to access your budget.</p>
+        <h1 className="mt-4 text-xl font-bold tracking-tight">
+          Budget<span className="text-brand">IQ</span>
+        </h1>
+        <p className="mt-1 text-xs font-medium uppercase tracking-widest text-muted">
+          Track&nbsp;·&nbsp;Analyze&nbsp;·&nbsp;Optimize
+        </p>
 
         <a
           href="/api/auth/login"

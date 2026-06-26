@@ -18,6 +18,7 @@ import type {
   MonthlySettingPatch,
   MonthlySettingResult,
   MonthView,
+  OnboardingPayload,
   Rollup,
   Subcategory,
   SubcategoryCreate,
@@ -44,6 +45,19 @@ export const useUpdateMe = () => {
   return useMutation({
     mutationFn: (body: UserUpdate) => api.patch<User>("/me", body).then((r) => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }),
+  });
+};
+
+// ---- onboarding ----
+export const useCompleteOnboarding = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: OnboardingPayload) => api.post<User>("/onboarding", body).then((r) => r.data),
+    onSuccess: () => {
+      // Refetch auth (flips `onboarded` true) and the freshly-created catalog.
+      qc.invalidateQueries({ queryKey: ["auth", "me"] });
+      ["categories", "subcategories"].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
+    },
   });
 };
 

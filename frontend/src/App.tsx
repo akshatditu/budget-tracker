@@ -3,6 +3,7 @@ import { AppProvider } from "./lib/AppContext";
 import { useAuth, useAuthExpiryListener } from "./lib/auth";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
+import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import MonthView from "./pages/MonthView";
 import AnnualRollup from "./pages/AnnualRollup";
@@ -22,6 +23,9 @@ export default function App() {
   }
 
   if (!user) return <Login />;
+
+  // First-run users build their sections before entering the app.
+  if (!user.onboarded) return <Onboarding />;
 
   return (
     <AppProvider>

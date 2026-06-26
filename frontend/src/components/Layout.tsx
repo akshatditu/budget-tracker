@@ -4,26 +4,29 @@ import {
   Receipt, Wallet, Settings as SettingsIcon, ChevronLeft, ChevronRight,
   Menu, X, LogOut, type LucideIcon,
 } from "lucide-react";
+import { BudgetIQWordmark } from "./Logo";
 import { useEffect, useState, type ReactNode } from "react";
 import { useApp } from "../lib/AppContext";
 import { useAuth, logout } from "../lib/auth";
 import { useYears, useCreateYear } from "../api/hooks";
 import { MONTH_NAMES } from "../lib/format";
+import { startTour, tourSeenKey } from "../lib/tour";
 
 interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
   end?: boolean;
+  tour?: string; // data-tour anchor for the guided tour
 }
 
 const NAV: NavItem[] = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/month", label: "Month", icon: CalendarDays },
+  { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true, tour: "nav-dashboard" },
+  { to: "/month", label: "Month", icon: CalendarDays, tour: "nav-month" },
   { to: "/rollup", label: "Annual Rollup", icon: TableProperties },
-  { to: "/setup", label: "Budget Setup", icon: SlidersHorizontal },
-  { to: "/transactions", label: "Transactions", icon: Receipt },
-  { to: "/income", label: "Income", icon: Wallet },
+  { to: "/setup", label: "Budget Setup", icon: SlidersHorizontal, tour: "nav-setup" },
+  { to: "/transactions", label: "Transactions", icon: Receipt, tour: "nav-transactions" },
+  { to: "/income", label: "Income", icon: Wallet, tour: "nav-income" },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ];
 
@@ -65,23 +68,23 @@ function YearMonthBar() {
   );
 }
 
-function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarNav({ onNavigate, withTourAnchors = false }: { onNavigate?: () => void; withTourAnchors?: boolean }) {
   return (
     <>
-      <div className="flex items-center gap-2 px-5 py-5">
-        <div className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-sm font-bold text-white">₹</div>
-        <span className="font-semibold">Budget Tracker</span>
+      <div className="px-5 py-5">
+        <BudgetIQWordmark />
       </div>
       <nav className="flex-1 space-y-1 px-3">
-        {NAV.map(({ to, label, icon: Icon, end }) => (
+        {NAV.map(({ to, label, icon: Icon, end, tour }) => (
           <NavLink
             key={to}
             to={to}
             end={end}
+            data-tour={withTourAnchors ? tour : undefined}
             onClick={onNavigate}
             className={({ isActive }) =>
               `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                isActive ? "bg-indigo-50 text-brand" : "text-muted hover:bg-canvas hover:text-ink"
+                isActive ? "bg-blue-50 text-brand" : "text-muted hover:bg-canvas hover:text-ink"
               }`
             }
           >
@@ -114,15 +117,26 @@ function UserMenu() {
 export default function Layout({ children }: { children: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { pathname } = useLocation();
+  const { data: user } = useAuth();
 
   // Close the mobile drawer whenever the route changes.
   useEffect(() => setDrawerOpen(false), [pathname]);
+
+  // Auto-run the guided tour once, on the first dashboard visit after onboarding.
+  useEffect(() => {
+    if (!user || pathname !== "/") return;
+    const key = tourSeenKey(user.id);
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, "1");
+    const t = setTimeout(() => startTour(), 700); // let the layout paint first
+    return () => clearTimeout(t);
+  }, [user, pathname]);
 
   return (
     <div className="flex h-full overflow-x-hidden">
       {/* Desktop sidebar */}
       <aside className="hidden w-56 shrink-0 flex-col border-r border-line bg-surface lg:flex">
-        <SidebarNav />
+        <SidebarNav withTourAnchors />
       </aside>
 
       {/* Mobile drawer */}
