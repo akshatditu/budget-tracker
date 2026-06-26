@@ -14,8 +14,19 @@ class Settings(BaseSettings):
     secret_key: str = "dev-insecure-change-me"
     # Public origin used to build a stable OAuth redirect URI (survives Render's TLS proxy).
     public_base_url: str = "http://localhost:8000"
+    # Where to redirect the browser after a successful login.
+    # Prod default is "/" (same origin). Override to http://localhost:5173 in
+    # local dev so the callback on :8000 sends the browser back to the Vite app.
+    frontend_url: str = "/"
     # Comma-separated allowlist of Google emails permitted to sign in.
+    # Add friends'/family members' Google emails here (comma-separated) to let them in.
     allowed_emails: str = "akshatav56@gmail.com"
+    # Fernet key (base64) used to encrypt money values at rest. The DB never stores
+    # plaintext amounts and never holds this key — it lives only in the server env.
+    # Generate with:
+    #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    # WARNING: losing this key makes every stored amount permanently unreadable.
+    encryption_key: str = ""
 
     @property
     def cors_origin_list(self) -> list[str]:

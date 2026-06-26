@@ -20,14 +20,17 @@ from app.services.rollup import MONTH_NAMES, MONTHS, f, income_by_month
 def _by_month(db: Session, year_id: int, *, investment: bool) -> dict[int, float]:
     """Sum transactions per month, filtered by whether their category is an investment."""
     op = Category.kind == "investment" if investment else Category.kind != "investment"
+    # Encrypted amounts can't be SUM()-ed in SQL; keep the join/filter, sum in Python.
     rows = db.execute(
-        select(func.extract("month", Transaction.txn_date), func.sum(Transaction.amount))
+        select(func.extract("month", Transaction.txn_date), Transaction.amount)
         .join(Subcategory, Subcategory.id == Transaction.subcategory_id)
         .join(Category, Category.id == Subcategory.category_id)
         .where(Transaction.budget_year_id == year_id, op)
-        .group_by(func.extract("month", Transaction.txn_date))
     ).all()
-    return {int(m): f(total) for m, total in rows}
+    out: dict[int, float] = {}
+    for m, amt in rows:
+        out[int(m)] = out.get(int(m), 0.0) + f(amt)
+    return out
 
 
 def carry_forward_chain(db: Session, by: BudgetYear) -> list[dict]:

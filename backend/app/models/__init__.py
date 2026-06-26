@@ -13,16 +13,19 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
-    Numeric,
     String,
     UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.crypto import EncryptedNumeric
 from app.core.database import Base
 
-MONEY = Numeric(14, 2)
+# Money values are encrypted at rest (see app/core/crypto.py): stored as opaque
+# Fernet tokens, decrypted transparently on read so the rollup math is unchanged.
+# (Pre-encryption these were Numeric(14,2); that precision still applies in-app.)
+MONEY = EncryptedNumeric
 
 
 class User(Base):
@@ -34,6 +37,12 @@ class User(Base):
     display_name: Mapped[str] = mapped_column(String(120))
     currency: Mapped[str] = mapped_column(String(8), default="INR")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # NULL until the user finishes the onboarding wizard; gates the first-run flow.
+    onboarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    @property
+    def onboarded(self) -> bool:
+        return self.onboarded_at is not None
 
 
 class BudgetYear(Base):

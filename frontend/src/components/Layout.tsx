@@ -37,6 +37,14 @@ function YearMonthBar() {
   const { pathname } = useLocation();
   const showMonth = pathname.startsWith("/month");
 
+  // If the stored year doesn't exist in the DB (e.g. localStorage has a future
+  // year that was never created), fall back to the most recent existing year.
+  useEffect(() => {
+    if (years.length > 0 && !years.find((it) => it.year === year)) {
+      setYear(years[0].year); // list is ordered year DESC
+    }
+  }, [years, year, setYear]);
+
   const ensureYear = async (y: number) => {
     if (!years.find((it) => it.year === y)) await createYear.mutateAsync({ year: y });
     setYear(y);

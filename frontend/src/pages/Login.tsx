@@ -1,5 +1,12 @@
 import { BudgetIQIcon } from "../components/Logo";
 
+// In dev the login link must hit the backend port directly so the OAuth state
+// cookie is set and read on the same origin (localhost:8000 both ways).
+// In production the frontend and backend share the same origin so "/" works.
+const loginHref = import.meta.env.DEV
+  ? "http://localhost:8000/api/auth/login"
+  : "/api/auth/login";
+
 export default function Login() {
   return (
     <div className="grid h-full place-items-center bg-canvas p-6">
@@ -15,7 +22,7 @@ export default function Login() {
         </p>
 
         <a
-          href="/api/auth/login"
+          href={loginHref}
           className="mt-6 flex w-full items-center justify-center gap-3 rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-medium text-ink transition hover:bg-canvas"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">

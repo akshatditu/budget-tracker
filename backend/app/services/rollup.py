@@ -52,16 +52,20 @@ def elapsed_months(year: int, today: date | None = None) -> int:
 
 
 def _spent_by_subcat_month(db: Session, year_id: int) -> dict[tuple[int, int], float]:
+    # Amounts are encrypted at rest, so SUM() can't run in SQL — load rows and sum
+    # in Python (decryption happens transparently as the column is read).
     rows = db.execute(
         select(
             Transaction.subcategory_id,
             func.extract("month", Transaction.txn_date),
-            func.sum(Transaction.amount),
-        )
-        .where(Transaction.budget_year_id == year_id)
-        .group_by(Transaction.subcategory_id, func.extract("month", Transaction.txn_date))
+            Transaction.amount,
+        ).where(Transaction.budget_year_id == year_id)
     ).all()
-    return {(int(sid), int(m)): f(total) for sid, m, total in rows}
+    out: dict[tuple[int, int], float] = {}
+    for sid, m, amt in rows:
+        key = (int(sid), int(m))
+        out[key] = out.get(key, 0.0) + f(amt)
+    return out
 
 
 def _budget_by_subcat_month(
@@ -90,12 +94,14 @@ def _active_structure(db: Session, user_id: int):
 
 
 def income_by_month(db: Session, year_id: int) -> dict[int, float]:
+    # Encrypted amounts can't be SUM()-ed in SQL; load and sum in Python.
     rows = db.execute(
-        select(Income.month, func.sum(Income.amount))
-        .where(Income.budget_year_id == year_id)
-        .group_by(Income.month)
+        select(Income.month, Income.amount).where(Income.budget_year_id == year_id)
     ).all()
-    return {int(m): f(total) for m, total in rows}
+    out: dict[int, float] = {}
+    for m, amt in rows:
+        out[int(m)] = out.get(int(m), 0.0) + f(amt)
+    return out
 
 
 # --------------------------------------------------------------------------- #

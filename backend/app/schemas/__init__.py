@@ -18,6 +18,18 @@ class UserOut(ORMModel):
     email: str
     display_name: str
     currency: str
+    onboarded: bool = False
+
+
+# ---- Onboarding ----
+class OnboardingSection(BaseModel):
+    name: str
+    kind: str = "spending"
+    items: list[str] = []
+
+
+class OnboardingPayload(BaseModel):
+    sections: list[OnboardingSection]
 
 
 class UserUpdate(BaseModel):

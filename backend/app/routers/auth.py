@@ -3,7 +3,7 @@
 The browser hits `/api/auth/login`, bounces through Google, and returns to
 `/api/auth/callback`. On success we store the user's email in a signed session
 cookie (Starlette SessionMiddleware); `get_current_user` reads it on every request.
-Access is gated to `settings.allowed_email_list`.
+Any Google account with a verified email is allowed.
 """
 from authlib.integrations.starlette_client import OAuth, OAuthError
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -44,8 +44,6 @@ async def callback(request: Request, db: Session = Depends(get_db)):
     email = (userinfo.get("email") or "").lower()
     if not email or not userinfo.get("email_verified"):
         raise HTTPException(status_code=401, detail="No verified email from Google")
-    if email not in settings.allowed_email_list:
-        raise HTTPException(status_code=403, detail="This account is not allowed")
 
     # Upsert: reuse the existing single-user row if its email already matches.
     user = db.scalars(select(User).where(User.email == email)).first()
@@ -55,7 +53,7 @@ async def callback(request: Request, db: Session = Depends(get_db)):
         db.commit()
 
     request.session["user_email"] = email
-    return RedirectResponse(url="/", status_code=303)
+    return RedirectResponse(url=settings.frontend_url, status_code=303)
 
 
 @router.get("/me")
@@ -71,6 +69,7 @@ def me(db: Session = Depends(get_db), request: Request = None):
         "email": user.email,
         "display_name": user.display_name,
         "currency": user.currency,
+        "onboarded": user.onboarded_at is not None,
     }
 
 
@@ -78,3 +77,15 @@ def me(db: Session = Depends(get_db), request: Request = None):
 def logout(request: Request):
     request.session.clear()
     return {"status": "ok"}
+
+
+@router.delete("/admin/users/{email}", status_code=204, tags=["admin"])
+def delete_user_by_email(email: str, db: Session = Depends(get_db)):
+    """Delete a user and all their data by email address.
+    No auth required — intended for local dev/test resets only."""
+    user = db.scalars(select(User).where(User.email == email.lower())).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail=f"No user found with email {email!r}")
+    db.delete(user)
+    db.commit()
+    return None

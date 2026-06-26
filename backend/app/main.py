@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.config import settings
-from app.routers import auth, budgets, catalog, incomes, transactions, views, years
+from app.routers import auth, budgets, catalog, incomes, onboarding, transactions, views, years
 
 app = FastAPI(title="Budget Tracker API", version="0.1.0")
 
@@ -33,6 +33,7 @@ def health():
 
 
 app.include_router(auth.router)
+app.include_router(onboarding.router)
 app.include_router(years.router)
 app.include_router(catalog.router)
 app.include_router(budgets.router)

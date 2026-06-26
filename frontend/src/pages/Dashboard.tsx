@@ -11,9 +11,10 @@ import { Card, KpiCard, StatusChip } from "../components/ui";
 
 export default function Dashboard() {
   const { year } = useApp();
-  const { data, isLoading } = useDashboard(year);
+  const { data, isLoading, isError } = useDashboard(year);
 
-  if (isLoading || !data) return <p className="text-sm text-muted">Loading…</p>;
+  if (isLoading) return <p className="text-sm text-muted">Loading…</p>;
+  if (isError || !data) return <p className="text-sm text-muted">No budget data found for {year}.</p>;
   const k = data.kpis;
   // Investments are retained wealth, so they don't belong in the "spend" pie.
   const pie = data.section_split.filter((s) => s.kind !== "investment" && s.spent > 0);
