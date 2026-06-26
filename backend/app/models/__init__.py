@@ -81,9 +81,9 @@ class Subcategory(Base):
     name: Mapped[str] = mapped_column(String(120))
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
-    # Opt-in envelope rollover: unspent budget carries into this sub's next month
-    # (and overspend borrows forward). Off by default to preserve the flat model.
-    rollover: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # Envelope rollover: unspent budget carries into this sub's next month (and
+    # overspend borrows forward). On by default; turn off per-sub for flat items.
+    rollover: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
     category: Mapped[Category] = relationship(back_populates="subcategories")
 

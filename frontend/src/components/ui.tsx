@@ -43,7 +43,7 @@ export function KpiCard({ label, value, sub, accent = "var(--color-brand)", icon
   return (
     <div className="min-w-0 rounded-xl border border-line bg-surface p-4 shadow-sm">
       <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-xs font-medium uppercase tracking-wide text-muted">{label}</span>
+        <span className="text-xs font-medium uppercase tracking-wide text-muted">{label}</span>
         {Icon && (
           <span className="rounded-lg p-1.5" style={{ background: `${accent}1a`, color: accent }}>
             <Icon size={16} />

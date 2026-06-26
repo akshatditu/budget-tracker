@@ -76,7 +76,7 @@ class SubcategoryOut(ORMModel):
     name: str
     sort_order: int
     archived: bool
-    rollover: bool = False
+    rollover: bool = True
 
 
 class SubcategoryCreate(BaseModel):
