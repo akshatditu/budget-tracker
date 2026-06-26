@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Plus, Trash2, TrendingUp, PiggyBank, Wallet, Receipt } from "lucide-react";
+import { Plus, Trash2, TrendingUp, PiggyBank, Wallet, Receipt, Gauge, RotateCw } from "lucide-react";
 import { useApp } from "../lib/AppContext";
 import {
   useMonth, useBudgetMutations, useTransactions, useTransactionMutations,
@@ -106,6 +106,8 @@ function SectionTable({ section, year, month, onPickSub }: SectionTableProps) {
   const color = sectionColor(section.name);
   // Investment sections hold retained wealth — show contributions as "Invested", not "Spent".
   const spentLabel = section.kind === "investment" ? "Invested" : "Spent";
+  // Only widen the table with rollover columns when at least one item rolls over.
+  const hasRollover = section.items.some((it) => it.rollover);
   return (
     <Card
       title={
@@ -114,7 +116,7 @@ function SectionTable({ section, year, month, onPickSub }: SectionTableProps) {
           {section.name}
         </span>
       }
-      action={<span className="text-xs text-muted">{spentLabel} {money(section.totals.spent)} / {money(section.totals.revised)}</span>}
+      action={<span className="text-xs text-muted">{spentLabel} {money(section.totals.spent)} / {money(section.totals.available)}</span>}
     >
       <div className="overflow-x-auto">
       <table className="w-full min-w-[30rem] text-sm">
@@ -123,6 +125,8 @@ function SectionTable({ section, year, month, onPickSub }: SectionTableProps) {
             <th className="pb-2 font-medium">Item</th>
             <th className="pb-2 text-right font-medium">Initial</th>
             <th className="pb-2 text-right font-medium">Revised</th>
+            {hasRollover && <th className="pb-2 text-right font-medium" title="Surplus/deficit carried in from prior months">Rolled-in</th>}
+            {hasRollover && <th className="pb-2 text-right font-medium" title="Revised + rolled-in — spendable this month">Available</th>}
             <th className="pb-2 text-right font-medium">{spentLabel}</th>
             <th className="pb-2 text-right font-medium">Remaining</th>
           </tr>
@@ -130,7 +134,12 @@ function SectionTable({ section, year, month, onPickSub }: SectionTableProps) {
         <tbody>
           {section.items.map((it) => (
             <tr key={it.subcategory_id} className="border-t border-line">
-              <td className="py-1.5 font-medium">{it.name}</td>
+              <td className="py-1.5 font-medium">
+                <span className="flex items-center gap-1.5">
+                  {it.name}
+                  {it.rollover && <RotateCw size={12} className="text-brand" aria-label="rolls over" />}
+                </span>
+              </td>
               <td className="py-1.5 text-right text-muted">{money(it.initial)}</td>
               <td className="py-1.5">
                 <EditableNumber
@@ -138,6 +147,14 @@ function SectionTable({ section, year, month, onPickSub }: SectionTableProps) {
                   onCommit={(v) => patchMonthly.mutate({ month, subcategory_id: it.subcategory_id, revised_amount: v })}
                 />
               </td>
+              {hasRollover && (
+                <td className={`py-1.5 pr-2 text-right ${it.rolled_in < 0 ? "text-red-600" : "text-muted"}`}>
+                  {it.rollover ? money(it.rolled_in) : "—"}
+                </td>
+              )}
+              {hasRollover && (
+                <td className="py-1.5 pr-2 text-right font-medium">{money(it.available)}</td>
+              )}
               <td className="py-1.5">
                 <button onClick={() => onPickSub(it)} className="w-full rounded px-2 py-1 text-right hover:bg-indigo-50 hover:ring-1 hover:ring-indigo-200" title="Manage expenses">
                   {money(it.spent)}
@@ -157,13 +174,15 @@ function SectionTable({ section, year, month, onPickSub }: SectionTableProps) {
             <td className="pt-2">Total</td>
             <td className="pt-2 text-right text-muted">{money(section.totals.initial)}</td>
             <td className="pt-2 pr-2 text-right">{money(section.totals.revised)}</td>
+            {hasRollover && <td className={`pt-2 pr-2 text-right ${section.totals.rolled_in < 0 ? "text-red-600" : "text-muted"}`}>{money(section.totals.rolled_in)}</td>}
+            {hasRollover && <td className="pt-2 pr-2 text-right">{money(section.totals.available)}</td>}
             <td className="pt-2 pr-2 text-right">{money(section.totals.spent)}</td>
             <td className="pt-2 pr-2 text-right">{money(section.totals.remaining)}</td>
           </tr>
         </tfoot>
       </table>
       </div>
-      <div className="mt-3"><ProgressBar value={section.totals.spent} max={section.totals.revised} color={color} /></div>
+      <div className="mt-3"><ProgressBar value={section.totals.spent} max={section.totals.available} color={color} /></div>
     </Card>
   );
 }
@@ -179,11 +198,18 @@ export default function MonthView() {
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_320px]">
       <div className="min-w-0 space-y-6">
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
           <KpiCard label="Income" value={money(s.income)} icon={Wallet} accent="var(--color-needs)" />
           <KpiCard label="Budget" value={money(s.budget_total)} icon={TrendingUp} accent="var(--color-brand)" />
           <KpiCard label="Spent" value={money(s.spent)} icon={Receipt} accent="var(--color-wants)" />
           <KpiCard label="In Bank" value={money(s.remaining_in_bank)} icon={PiggyBank} accent="var(--color-investments)" />
+          <KpiCard
+            label="Safe to spend / day"
+            value={money(s.safe_to_spend_today)}
+            sub={s.days_left > 0 ? `${s.days_left} day${s.days_left === 1 ? "" : "s"} left` : "month ended"}
+            icon={Gauge}
+            accent="var(--color-bills)"
+          />
         </div>
         <div className="grid grid-cols-1 gap-6 2xl:grid-cols-2">
           {data.sections.map((sec) => (

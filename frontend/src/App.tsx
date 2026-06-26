@@ -10,6 +10,9 @@ import AnnualRollup from "./pages/AnnualRollup";
 import BudgetSetup from "./pages/BudgetSetup";
 import Transactions from "./pages/Transactions";
 import Income from "./pages/Income";
+import Goals from "./pages/Goals";
+import Reconciliation from "./pages/Reconciliation";
+import Guide from "./pages/Guide";
 import Settings from "./pages/Settings";
 
 export default function App() {
@@ -37,6 +40,9 @@ export default function App() {
           <Route path="/setup" element={<BudgetSetup />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/income" element={<Income />} />
+          <Route path="/goals" element={<Goals />} />
+          <Route path="/reconcile" element={<Reconciliation />} />
+          <Route path="/guide" element={<Guide />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </Layout>

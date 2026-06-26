@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, CalendarDays, TableProperties, SlidersHorizontal,
-  Receipt, Wallet, Settings as SettingsIcon, ChevronLeft, ChevronRight,
+  Receipt, Wallet, Target, Scale, BookOpen, Settings as SettingsIcon, ChevronLeft, ChevronRight,
   Menu, X, LogOut, type LucideIcon,
 } from "lucide-react";
 import { BudgetIQWordmark } from "./Logo";
@@ -27,6 +27,9 @@ const NAV: NavItem[] = [
   { to: "/setup", label: "Budget Setup", icon: SlidersHorizontal, tour: "nav-setup" },
   { to: "/transactions", label: "Transactions", icon: Receipt, tour: "nav-transactions" },
   { to: "/income", label: "Income", icon: Wallet, tour: "nav-income" },
+  { to: "/goals", label: "Goals", icon: Target },
+  { to: "/reconcile", label: "Reconcile", icon: Scale },
+  { to: "/guide", label: "Guide", icon: BookOpen },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ];
 

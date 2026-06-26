@@ -6,10 +6,17 @@ import type {
   AnnualBudgetSetResult,
   AnnualRevisedPatch,
   AnnualRevisedResult,
+  BalanceSnapshot,
+  BalanceSnapshotCreate,
   Category,
   CategoryCreate,
   CategoryUpdate,
   Dashboard,
+  Goal,
+  GoalContribution,
+  GoalContributionCreate,
+  GoalCreate,
+  GoalUpdate,
   Income,
   IncomeCreate,
   IncomeUpdate,
@@ -83,6 +90,8 @@ export const useSubcategories = (includeArchived = false) =>
 const invalidateAll = (qc: QueryClient, year: number) => {
   ["categories", "subcategories"].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
   qc.invalidateQueries({ queryKey: ["year", year] });
+  // Catalog edits (rollover toggle, rename, archive) change the derived views too.
+  ["month", "rollup", "dashboard"].forEach((k) => qc.invalidateQueries({ queryKey: [k, year] }));
 };
 
 export const useCatalogMutations = (year: number) => {
@@ -232,6 +241,76 @@ export const useMonthSettingMutation = (year: number) => {
       qc.invalidateQueries({ queryKey: ["rollup", year] });
     },
   });
+};
+
+// ---- goals (sinking funds) ----
+// Goals are user-scoped (span years), so the query key carries no year.
+export const useGoals = (includeArchived = false) =>
+  useQuery({
+    queryKey: ["goals", includeArchived],
+    queryFn: () => get<Goal[]>("/goals", { include_archived: includeArchived }),
+  });
+
+export const useGoalContributions = (goalId: number | null) =>
+  useQuery({
+    queryKey: ["goal-contributions", goalId],
+    queryFn: () => get<GoalContribution[]>(`/goals/${goalId}/contributions`),
+    enabled: !!goalId,
+  });
+
+export const useGoalMutations = () => {
+  const qc = useQueryClient();
+  const done = () => {
+    qc.invalidateQueries({ queryKey: ["goals"] });
+    qc.invalidateQueries({ queryKey: ["goal-contributions"] });
+  };
+  return {
+    create: useMutation({
+      mutationFn: (b: GoalCreate) => api.post<Goal>("/goals", b),
+      onSuccess: done,
+    }),
+    update: useMutation({
+      mutationFn: ({ id, ...b }: GoalUpdate) => api.patch<Goal>(`/goals/${id}`, b),
+      onSuccess: done,
+    }),
+    remove: useMutation({
+      mutationFn: (id: number) => api.delete<void>(`/goals/${id}`),
+      onSuccess: done,
+    }),
+    addContribution: useMutation({
+      mutationFn: ({ goalId, ...b }: GoalContributionCreate & { goalId: number }) =>
+        api.post<Goal>(`/goals/${goalId}/contributions`, b),
+      onSuccess: done,
+    }),
+    removeContribution: useMutation({
+      mutationFn: ({ goalId, id }: { goalId: number; id: number }) =>
+        api.delete<void>(`/goals/${goalId}/contributions/${id}`),
+      onSuccess: done,
+    }),
+  };
+};
+
+// ---- reconciliation ----
+export const useReconciliations = (year: number) =>
+  useQuery({
+    queryKey: ["reconciliations", year],
+    queryFn: () => get<BalanceSnapshot[]>(`/years/${year}/reconciliations`),
+    enabled: !!year,
+  });
+
+export const useReconciliationMutations = (year: number) => {
+  const qc = useQueryClient();
+  const done = () => qc.invalidateQueries({ queryKey: ["reconciliations", year] });
+  return {
+    create: useMutation({
+      mutationFn: (b: BalanceSnapshotCreate) => api.post<BalanceSnapshot>(`/years/${year}/reconciliations`, b),
+      onSuccess: done,
+    }),
+    remove: useMutation({
+      mutationFn: (id: number) => api.delete<void>(`/years/${year}/reconciliations/${id}`),
+      onSuccess: done,
+    }),
+  };
 };
 
 // ---- rollup / dashboard ----

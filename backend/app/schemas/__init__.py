@@ -76,6 +76,7 @@ class SubcategoryOut(ORMModel):
     name: str
     sort_order: int
     archived: bool
+    rollover: bool = False
 
 
 class SubcategoryCreate(BaseModel):
@@ -89,6 +90,7 @@ class SubcategoryUpdate(BaseModel):
     category_id: Optional[int] = None
     sort_order: Optional[int] = None
     archived: Optional[bool] = None
+    rollover: Optional[bool] = None
 
 
 # ---- Budgets ----
@@ -158,3 +160,53 @@ class MonthlySettingPatch(BaseModel):
     spend_limit: Optional[float] = None
     opening_carry_forward: Optional[float] = None
     notes: Optional[str] = None
+
+
+# ---- Goals (sinking funds) ----
+class GoalCreate(BaseModel):
+    name: str
+    target_amount: float = 0
+    target_date: Optional[date] = None
+
+
+class GoalUpdate(BaseModel):
+    name: Optional[str] = None
+    target_amount: Optional[float] = None
+    target_date: Optional[date] = None
+    archived: Optional[bool] = None
+
+
+class GoalOut(BaseModel):
+    """Goal + ledger-derived figures (saved/remaining/monthly_required/on_track)."""
+
+    id: int
+    name: str
+    target_amount: float
+    target_date: Optional[date]
+    archived: bool
+    saved: float
+    remaining: float
+    pct: float
+    monthly_required: Optional[float]
+    on_track: Optional[bool]
+
+
+class GoalContributionCreate(BaseModel):
+    amount: float
+    contrib_date: date
+    note: Optional[str] = None
+
+
+class GoalContributionOut(ORMModel):
+    id: int
+    goal_id: int
+    amount: float
+    contrib_date: date
+    note: Optional[str]
+
+
+# ---- Reconciliation ----
+class BalanceSnapshotCreate(BaseModel):
+    as_of_date: date
+    actual_balance: float
+    note: Optional[str] = None

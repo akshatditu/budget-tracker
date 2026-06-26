@@ -1,13 +1,23 @@
 """Unit tests for the rollup math (no DB) — pin the Excel-parity semantics."""
 from datetime import date
 
-from app.services.rollup import _subcat_annual, elapsed_months
+from app.services.rollup import _subcat_annual, days_left_in_month, elapsed_months
 
 
 def test_elapsed_months():
     assert elapsed_months(2025, today=date(2026, 6, 23)) == 12  # past year
     assert elapsed_months(2027, today=date(2026, 6, 23)) == 0   # future year
     assert elapsed_months(2026, today=date(2026, 6, 23)) == 6   # current year -> June
+
+
+def test_days_left_in_month():
+    # Current month: today inclusive through month end (June has 30 days).
+    assert days_left_in_month(2026, 6, today=date(2026, 6, 23)) == 8
+    assert days_left_in_month(2026, 6, today=date(2026, 6, 30)) == 1
+    # Past month -> nothing left to pace.
+    assert days_left_in_month(2026, 5, today=date(2026, 6, 23)) == 0
+    # Future month -> the whole month is still ahead (July has 31 days).
+    assert days_left_in_month(2026, 7, today=date(2026, 6, 23)) == 31
 
 
 def test_subcat_annual_set_aside_and_current():
@@ -21,6 +31,8 @@ def test_subcat_annual_set_aside_and_current():
     assert a["revised"] == 122000.0           # 12000 + 11*10000
     assert a["spent"] == 8000.0
     assert a["set_aside"] == 54000.0          # (12000-8000) + 5*10000
+    assert a["overspent"] == 0.0              # no elapsed month went over
+    assert a["available"] == 54000.0          # set_aside - overspent
     assert a["current"] == 62000.0            # spent + set_aside
     assert a["remaining"] == 60000.0          # revised - current
 
@@ -34,6 +46,8 @@ def test_subcat_annual_overspend_no_negative_set_aside():
     a = _subcat_annual(spent, budgets, sub_id, year_elapsed=1)
 
     assert a["set_aside"] == 0.0
+    assert a["overspent"] == 4000.0           # spent - revised, surfaced explicitly
+    assert a["available"] == -4000.0          # set_aside - overspent, net is negative
     assert a["spent"] == 9000.0
     assert a["current"] == 9000.0
     assert a["remaining"] == 5000.0 - 9000.0  # revised - current, can go negative

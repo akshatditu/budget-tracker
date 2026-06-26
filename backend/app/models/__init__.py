@@ -81,6 +81,9 @@ class Subcategory(Base):
     name: Mapped[str] = mapped_column(String(120))
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Opt-in envelope rollover: unspent budget carries into this sub's next month
+    # (and overspend borrows forward). Off by default to preserve the flat model.
+    rollover: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     category: Mapped[Category] = relationship(back_populates="subcategories")
 
@@ -156,3 +159,54 @@ class MonthlySetting(Base):
     spend_limit: Mapped[float | None] = mapped_column(MONEY, nullable=True)
     opening_carry_forward: Mapped[float | None] = mapped_column(MONEY, nullable=True)
     notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+
+class Goal(Base):
+    """A sinking fund / savings target. User-scoped (spans years). `saved` is never
+    stored — it is summed from the GoalContribution ledger, mirroring how `spent` is
+    summed from transactions."""
+
+    __tablename__ = "goals"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    target_amount: Mapped[float] = mapped_column(MONEY, default=0)
+    target_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    contributions: Mapped[list[GoalContribution]] = relationship(
+        back_populates="goal", cascade="all, delete-orphan"
+    )
+
+
+class GoalContribution(Base):
+    """A single deposit toward a Goal. The goal's `saved` total is the sum of these."""
+
+    __tablename__ = "goal_contributions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    goal_id: Mapped[int] = mapped_column(ForeignKey("goals.id", ondelete="CASCADE"), index=True)
+    amount: Mapped[float] = mapped_column(MONEY)
+    contrib_date: Mapped[date] = mapped_column(Date, index=True)
+    note: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    goal: Mapped[Goal] = relationship(back_populates="contributions")
+
+
+class BalanceSnapshot(Base):
+    """A point-in-time reading of the user's actual bank balance, used to reconcile
+    against the computed carry-forward chain so drift can be caught and trued-up."""
+
+    __tablename__ = "balance_snapshots"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    budget_year_id: Mapped[int] = mapped_column(ForeignKey("budget_years.id", ondelete="CASCADE"), index=True)
+    as_of_date: Mapped[date] = mapped_column(Date, index=True)
+    actual_balance: Mapped[float] = mapped_column(MONEY)
+    note: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

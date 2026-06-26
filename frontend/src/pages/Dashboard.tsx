@@ -3,7 +3,7 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line,
 } from "recharts";
-import { Wallet, Target, Receipt, PiggyBank, TrendingUp, ArrowRight } from "lucide-react";
+import { Wallet, Target, Receipt, PiggyBank, TrendingUp, ArrowRight, CalendarClock } from "lucide-react";
 import { useApp } from "../lib/AppContext";
 import { useDashboard } from "../api/hooks";
 import { money, moneyCompact, moneyChart, pct, sectionColor } from "../lib/format";
@@ -28,12 +28,25 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
         <KpiCard label="Income (YTD)" value={money(k.income)} icon={Wallet} accent="var(--color-needs)" />
         <KpiCard label="Annual Plan" value={money(k.annual_plan)} icon={Target} accent="var(--color-brand)" />
-        <KpiCard label="Spent (YTD)" value={money(k.spent)} sub={`Current incl. set-aside ${money(k.current)}`} icon={Receipt} accent="var(--color-wants)" />
+        <KpiCard
+          label="Spent (YTD)"
+          value={money(k.spent)}
+          sub={k.overspent > 0 ? `Overspent ${money(k.overspent)} so far` : `Current incl. set-aside ${money(k.current)}`}
+          icon={Receipt}
+          accent="var(--color-wants)"
+        />
         <KpiCard label="Invested (YTD)" value={money(k.invested)} icon={TrendingUp} accent="var(--color-investments)" />
         <KpiCard label="In Bank" value={money(k.remaining_in_bank)} sub={`Incl. invested · after ${k.elapsed_months} mo`} icon={PiggyBank} accent="var(--color-investments)" />
+        <KpiCard
+          label="Projected y/e spend"
+          value={money(k.projected_spend)}
+          sub={`In bank y/e ${money(k.projected_remaining_in_bank)}`}
+          icon={CalendarClock}
+          accent="var(--color-bills)"
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

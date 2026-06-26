@@ -56,7 +56,7 @@ export default function AnnualRollup() {
 
       <Card title="Plan vs Actual">
         <div className="overflow-x-auto">
-        <table className="w-full min-w-[40rem] text-sm">
+        <table className="w-full min-w-[52rem] text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-muted">
               <th className="pb-2 font-medium">Section</th>
@@ -64,6 +64,8 @@ export default function AnnualRollup() {
               <th className="pb-2 text-right font-medium">YTD Budget</th>
               <th className="pb-2 text-right font-medium">YTD Spent</th>
               <th className="pb-2 text-right font-medium">% of YTD</th>
+              <th className="pb-2 text-right font-medium" title="Year-end spend projected from the elapsed-month burn rate">Projected</th>
+              <th className="pb-2 text-right font-medium" title="Annual plan minus projected spend (positive = under plan)">Proj. Var.</th>
               <th className="pb-2 text-right font-medium">Status</th>
             </tr>
           </thead>
@@ -75,6 +77,8 @@ export default function AnnualRollup() {
                 <td className="py-2 text-right text-muted">{money(r.ytd_budget)}</td>
                 <td className="py-2 text-right">{money(r.ytd_spent)}</td>
                 <td className="py-2 text-right text-muted">{pct(r.pct_of_ytd_budget)}</td>
+                <td className="py-2 text-right">{money(r.projected_annual)}</td>
+                <td className={`py-2 text-right ${r.projected_variance < 0 ? "text-red-600" : "text-emerald-600"}`}>{money(r.projected_variance)}</td>
                 <td className="py-2 text-right"><StatusChip status={r.status} /></td>
               </tr>
             ))}
@@ -91,13 +95,15 @@ export default function AnnualRollup() {
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: sectionColor(s.name) }} />{s.name}
               </h4>
               <div className="overflow-x-auto">
-              <table className="w-full min-w-[28rem] text-sm">
+              <table className="w-full min-w-[34rem] text-sm">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wide text-muted">
                     <th className="pb-1 font-medium">Item</th>
                     <th className="pb-1 text-right font-medium">Revised</th>
                     <th className="pb-1 text-right font-medium">{s.kind === "investment" ? "Invested" : "Spent"}</th>
                     <th className="pb-1 text-right font-medium">Set Aside</th>
+                    <th className="pb-1 text-right font-medium" title="Elapsed-month overspend (max(0, spent − revised))">Overspent</th>
+                    <th className="pb-1 text-right font-medium" title="Set aside net of overspend">Available</th>
                     <th className="pb-1 text-right font-medium">Remaining</th>
                   </tr>
                 </thead>
@@ -108,10 +114,23 @@ export default function AnnualRollup() {
                       <td className="py-1.5 text-right text-muted">{money(it.revised)}</td>
                       <td className="py-1.5 text-right">{money(it.spent)}</td>
                       <td className="py-1.5 text-right text-emerald-600">{money(it.set_aside)}</td>
+                      <td className={`py-1.5 text-right ${it.overspent > 0 ? "text-red-600" : "text-muted"}`}>{it.overspent > 0 ? money(it.overspent) : "—"}</td>
+                      <td className={`py-1.5 text-right ${it.available < 0 ? "text-red-600" : ""}`}>{money(it.available)}</td>
                       <td className={`py-1.5 text-right ${it.remaining < 0 ? "text-red-600" : ""}`}>{money(it.remaining)}</td>
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr className="border-t border-line text-xs font-semibold">
+                    <td className="pt-1.5">Total</td>
+                    <td className="pt-1.5 text-right text-muted">{money(s.totals.revised)}</td>
+                    <td className="pt-1.5 text-right">{money(s.totals.spent)}</td>
+                    <td className="pt-1.5 text-right text-emerald-600">{money(s.totals.set_aside)}</td>
+                    <td className={`pt-1.5 text-right ${s.totals.overspent > 0 ? "text-red-600" : "text-muted"}`}>{s.totals.overspent > 0 ? money(s.totals.overspent) : "—"}</td>
+                    <td className={`pt-1.5 text-right ${s.totals.available < 0 ? "text-red-600" : ""}`}>{money(s.totals.available)}</td>
+                    <td className={`pt-1.5 text-right ${s.totals.remaining < 0 ? "text-red-600" : ""}`}>{money(s.totals.remaining)}</td>
+                  </tr>
+                </tfoot>
               </table>
               </div>
             </div>

@@ -100,6 +100,9 @@ def dashboard(year: int, db: Session = Depends(get_db), user: User = Depends(get
 
     income_total = roll["totals"]["income"]
     spent_total = roll["totals"]["spent"]
+    # Forecast: extrapolate spending sections' burn rate to the full year.
+    spending_pva = [r for r in roll["plan_vs_actual"] if r["section"] in spending_sections]
+    projected_spend = sum(r["projected_annual"] for r in spending_pva)
     return {
         "year": by.year,
         "kpis": {
@@ -108,7 +111,10 @@ def dashboard(year: int, db: Session = Depends(get_db), user: User = Depends(get
             "spent": spent_total,
             "invested": roll["totals"]["invested"],
             "current": roll["totals"]["current"],
+            "overspent": roll["totals"]["overspent"],
             "remaining_in_bank": chain[elapsed - 1]["carry_out"] if elapsed > 0 else 0.0,
+            "projected_spend": projected_spend,
+            "projected_remaining_in_bank": income_total - projected_spend,
             "elapsed_months": elapsed,
         },
         "section_split": section_split,

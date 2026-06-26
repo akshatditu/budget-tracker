@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Archive, FolderPlus } from "lucide-react";
+import { Plus, Archive, FolderPlus, RotateCw } from "lucide-react";
 import { useApp } from "../lib/AppContext";
 import {
   useAnnualBudget, useCategories, useSubcategories, useBudgetMutations, useCatalogMutations,
@@ -14,7 +14,7 @@ export default function BudgetSetup() {
   const { data: subs = [] } = useSubcategories();
   const { data: budget = [] } = useAnnualBudget(year);
   const { setAnnual, setAnnualRevised } = useBudgetMutations(year);
-  const { createCategory, createSubcategory, deleteSubcategory } = useCatalogMutations(year);
+  const { createCategory, createSubcategory, deleteSubcategory, updateSubcategory } = useCatalogMutations(year);
 
   const [addingTo, setAddingTo] = useState<number | null>(null); // category id
   const [newSubName, setNewSubName] = useState("");
@@ -71,6 +71,7 @@ export default function BudgetSetup() {
                 <th className="pb-2 text-right font-medium">Per month</th>
                 <th className="pb-2 text-right font-medium">Revised annual</th>
                 <th className="pb-2 text-right font-medium">Revised YTD</th>
+                <th className="pb-2 text-center font-medium" title="Carry unspent budget into next month">Rollover</th>
                 <th className="pb-2 w-10"></th>
               </tr>
             </thead>
@@ -88,6 +89,15 @@ export default function BudgetSetup() {
                       <EditableNumber value={b.revised_annual} onCommit={(v) => setAnnualRevised.mutate({ subcategory_id: it.id, revised_amount: v })} />
                     </td>
                     <td className="py-1.5 pr-2 text-right text-muted">{money(b.ytd_revised)}</td>
+                    <td className="py-1.5 text-center">
+                      <button
+                        title={it.rollover ? "Rollover on — click to turn off" : "Rollover off — click to turn on"}
+                        onClick={() => updateSubcategory.mutate({ id: it.id, rollover: !it.rollover })}
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium transition ${it.rollover ? "bg-blue-50 text-brand" : "text-muted hover:bg-canvas"}`}
+                      >
+                        <RotateCw size={13} className={it.rollover ? "" : "opacity-50"} />
+                      </button>
+                    </td>
                     <td className="py-1.5 text-right">
                       <button className="text-muted hover:text-red-600" title="Archive item" onClick={() => deleteSubcategory.mutate(it.id)}><Archive size={15} /></button>
                     </td>
@@ -96,7 +106,7 @@ export default function BudgetSetup() {
               })}
               {addingTo === cat.id && (
                 <tr className="border-t border-line">
-                  <td colSpan={6} className="py-2">
+                  <td colSpan={7} className="py-2">
                     <div className="flex gap-2">
                       <Input autoFocus value={newSubName} onChange={(e) => setNewSubName(e.target.value)} placeholder="New item name" onKeyDown={(e) => e.key === "Enter" && addSub(cat.id)} />
                       <Button onClick={() => addSub(cat.id)}>Add</Button>
@@ -106,7 +116,7 @@ export default function BudgetSetup() {
                 </tr>
               )}
               {cat.items.length === 0 && addingTo !== cat.id && (
-                <tr><td colSpan={6} className="py-3 text-center text-xs text-muted">No items yet.</td></tr>
+                <tr><td colSpan={7} className="py-3 text-center text-xs text-muted">No items yet.</td></tr>
               )}
             </tbody>
           </table>

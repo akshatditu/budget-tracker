@@ -71,6 +71,8 @@ export interface Subcategory {
   name: string;
   sort_order: number;
   archived: boolean;
+  /** Opt-in envelope rollover: unspent budget carries into next month. */
+  rollover: boolean;
 }
 
 export interface SubcategoryCreate {
@@ -85,6 +87,7 @@ export interface SubcategoryUpdate {
   category_id?: number;
   sort_order?: number;
   archived?: boolean;
+  rollover?: boolean;
 }
 
 // ---- Annual budget (GET /years/{year}/annual-budget) ----
@@ -219,9 +222,17 @@ export interface CarryForwardRow {
 export interface MonthItem {
   subcategory_id: number;
   name: string;
+  /** Whether envelope rollover is active for this item. */
+  rollover: boolean;
   initial: number;
   revised: number;
   spent: number;
+  /** Surplus/deficit carried in from prior months (0 unless rollover). */
+  rolled_in: number;
+  /** revised + rolled_in — the spendable envelope this month. */
+  available: number;
+  /** available - spent — carries into next month when rollover is on. */
+  rolled_out: number;
   remaining: number;
 }
 
@@ -229,6 +240,8 @@ export interface MonthSectionTotals {
   initial: number;
   revised: number;
   spent: number;
+  rolled_in: number;
+  available: number;
   remaining: number;
 }
 
@@ -247,6 +260,10 @@ export interface MonthSummary {
   invested: number;
   section_totals: Record<string, number>;
   remaining_in_bank: number;
+  /** Days remaining in the month (0 for past months, full length for future). */
+  days_left: number;
+  /** Spending-only remaining budget paced over the days left in the month. */
+  safe_to_spend_today: number;
   carry_forward: CarryForwardRow;
   spend_limit: number | null;
   notes: string | null;
@@ -268,6 +285,10 @@ export interface RollupItem {
   revised: number;
   spent: number;
   set_aside: number;
+  /** Elapsed-month overspend (sum of max(0, spent - revised)), surfaced explicitly. */
+  overspent: number;
+  /** Net budget slack after overspend is netted out: set_aside - overspent. */
+  available: number;
   current: number;
   remaining: number;
 }
@@ -277,6 +298,8 @@ export interface RollupTotals {
   revised: number;
   spent: number;
   set_aside: number;
+  overspent: number;
+  available: number;
   current: number;
   remaining: number;
 }
@@ -297,6 +320,10 @@ export interface PlanVsActualRow {
   variance: number;
   pct_of_ytd_budget: number;
   status: BudgetStatus;
+  /** Year-end spend projected from the elapsed-month burn rate. */
+  projected_annual: number;
+  /** annual_plan - projected_annual (positive = under plan). */
+  projected_variance: number;
 }
 
 export interface Rollup {
@@ -311,10 +338,75 @@ export interface Rollup {
     annual_plan: number;
     spent: number;
     current: number;
+    overspent: number;
+    available: number;
     invested: number;
     income: number;
   };
   carry_forward: CarryForwardRow[];
+}
+
+// ---- Goals (sinking funds) ----
+export interface Goal {
+  id: number;
+  name: string;
+  target_amount: number;
+  target_date: string | null;
+  archived: boolean;
+  /** Summed from the contributions ledger. */
+  saved: number;
+  remaining: number;
+  pct: number;
+  /** Remaining ÷ months left to the target date; null when no target date. */
+  monthly_required: number | null;
+  /** Saved vs a straight-line schedule; null when no target date. */
+  on_track: boolean | null;
+}
+
+export interface GoalCreate {
+  name: string;
+  target_amount: number;
+  target_date?: string | null;
+}
+
+export interface GoalUpdate {
+  id: number;
+  name?: string;
+  target_amount?: number;
+  target_date?: string | null;
+  archived?: boolean;
+}
+
+export interface GoalContribution {
+  id: number;
+  goal_id: number;
+  amount: number;
+  contrib_date: string;
+  note: string | null;
+}
+
+export interface GoalContributionCreate {
+  amount: number;
+  contrib_date: string;
+  note?: string | null;
+}
+
+// ---- Reconciliation ----
+export interface BalanceSnapshot {
+  id: number;
+  as_of_date: string;
+  actual_balance: number;
+  /** Computed carry-forward balance at that month. */
+  expected_balance: number;
+  /** actual_balance - expected_balance. */
+  drift: number;
+  note: string | null;
+}
+
+export interface BalanceSnapshotCreate {
+  as_of_date: string;
+  actual_balance: number;
+  note?: string | null;
 }
 
 // ---- Dashboard ----
@@ -324,7 +416,12 @@ export interface DashboardKpis {
   spent: number;
   invested: number;
   current: number;
+  overspent: number;
   remaining_in_bank: number;
+  /** Year-end spend projected from the elapsed-month burn rate. */
+  projected_spend: number;
+  /** income - projected_spend. */
+  projected_remaining_in_bank: number;
   elapsed_months: number;
 }
 

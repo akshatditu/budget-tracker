@@ -10,6 +10,8 @@ Excel monthly summary, generalised across the whole year.
 """
 from __future__ import annotations
 
+from datetime import date
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -74,3 +76,34 @@ def carry_forward_for_month(db: Session, by: BudgetYear, month: int) -> dict:
         if row["month"] == month:
             return row
     return {"month": month, "carry_in": 0.0, "income": 0.0, "spent": 0.0, "invested": 0.0, "net": 0.0, "carry_out": 0.0}
+
+
+def expected_balance(chain: list[dict], as_of: date) -> float:
+    """Computed bank balance at `as_of`, taken as the carry-forward chain's running
+    balance at the end of that month (the chain is month-granular)."""
+    m = as_of.month
+    for row in chain:
+        if row["month"] == m:
+            return row["carry_out"]
+    return 0.0
+
+
+def reconcile(db: Session, by: BudgetYear, snapshots) -> list[dict]:
+    """Pair each actual-balance snapshot with the computed (expected) balance for its
+    month and surface the drift (actual - expected)."""
+    chain = carry_forward_chain(db, by)
+    out = []
+    for s in snapshots:
+        expected = expected_balance(chain, s.as_of_date)
+        actual = f(s.actual_balance)
+        out.append(
+            {
+                "id": s.id,
+                "as_of_date": s.as_of_date,
+                "actual_balance": actual,
+                "expected_balance": expected,
+                "drift": actual - expected,
+                "note": s.note,
+            }
+        )
+    return out

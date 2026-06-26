@@ -14,6 +14,7 @@ Per (subcategory, year):
 """
 from __future__ import annotations
 
+import calendar
 from datetime import date
 
 from sqlalchemy import func, select
@@ -28,6 +29,7 @@ from app.models import (
     Subcategory,
     Transaction,
 )
+from app.services.envelopes import envelope_row
 
 MONTHS = list(range(1, 13))
 MONTH_NAMES = [
@@ -49,6 +51,21 @@ def elapsed_months(year: int, today: date | None = None) -> int:
     if year > today.year:
         return 0
     return today.month
+
+
+def days_left_in_month(year: int, month: int, today: date | None = None) -> int:
+    """Days remaining in (year, month), inclusive of today, for the *current* month.
+
+    Past months -> 0 (nothing left to pace). Future months -> the full month length
+    (the whole month is still ahead). The current month -> days from today to month end.
+    """
+    today = today or date.today()
+    month_len = calendar.monthrange(year, month)[1]
+    if (year, month) < (today.year, today.month):
+        return 0
+    if (year, month) > (today.year, today.month):
+        return month_len
+    return month_len - today.day + 1
 
 
 def _spent_by_subcat_month(db: Session, year_id: int) -> dict[tuple[int, int], float]:
@@ -118,24 +135,41 @@ def month_view(db: Session, by: BudgetYear, user, month: int) -> dict:
     section_totals = {}
     for cat in categories:
         items = []
-        t_initial = t_revised = t_spent = 0.0
+        t_initial = t_revised = t_spent = t_rolled_in = 0.0
         for sub in subs_by_cat.get(cat.id, []):
             initial, revised = budgets.get((sub.id, month), (0.0, 0.0))
             sp = spent.get((sub.id, month), 0.0)
+            # Investments never roll over (retained wealth). Rollover redistributes
+            # an envelope's own budget across months; non-rollover items keep the
+            # flat shape (rolled_in 0, available == revised, remaining == revised - spent).
+            is_roll = bool(getattr(sub, "rollover", False)) and cat.kind != "investment"
+            if is_roll:
+                env = envelope_row(budgets, spent, sub.id, month)
+                rolled_in = env["rolled_in"]
+            else:
+                rolled_in = 0.0
+            available = revised + rolled_in
+            rolled_out = available - sp
             items.append(
                 {
                     "subcategory_id": sub.id,
                     "name": sub.name,
+                    "rollover": is_roll,
                     "initial": initial,
                     "revised": revised,
                     "spent": sp,
-                    "remaining": revised - sp,
+                    "rolled_in": rolled_in,
+                    "available": available,
+                    "rolled_out": rolled_out,
+                    "remaining": rolled_out if is_roll else revised - sp,
                 }
             )
             t_initial += initial
             t_revised += revised
             t_spent += sp
+            t_rolled_in += rolled_in
         section_totals[cat.name] = t_revised
+        t_available = t_revised + t_rolled_in
         sections.append(
             {
                 "category_id": cat.id,
@@ -146,7 +180,9 @@ def month_view(db: Session, by: BudgetYear, user, month: int) -> dict:
                     "initial": t_initial,
                     "revised": t_revised,
                     "spent": t_spent,
-                    "remaining": t_revised - t_spent,
+                    "rolled_in": t_rolled_in,
+                    "available": t_available,
+                    "remaining": t_available - t_spent,
                 },
             }
         )
@@ -156,6 +192,15 @@ def month_view(db: Session, by: BudgetYear, user, month: int) -> dict:
     # Investments are retained wealth: kept out of "spent" and not subtracted from the bank.
     total_spent = sum(s["totals"]["spent"] for s in sections if s["kind"] != "investment")
     total_invested = sum(s["totals"]["spent"] for s in sections if s["kind"] == "investment")
+
+    # "Safe to spend today" paces the remaining spending budget over the days left in the
+    # month. Spending-only (investments excluded). For past/future months days_left collapses
+    # to the plain remaining (full month ahead) — the guard below avoids div-by-zero.
+    spending_remaining = sum(
+        s["totals"]["remaining"] for s in sections if s["kind"] != "investment"
+    )
+    days_left = days_left_in_month(by.year, month)
+    safe_to_spend_today = (max(0.0, spending_remaining) / days_left) if days_left else 0.0
 
     return {
         "year": by.year,
@@ -169,6 +214,8 @@ def month_view(db: Session, by: BudgetYear, user, month: int) -> dict:
             "invested": total_invested,
             "section_totals": section_totals,
             "remaining_in_bank": income - total_spent,
+            "days_left": days_left,
+            "safe_to_spend_today": safe_to_spend_today,
         },
     }
 
@@ -178,16 +225,23 @@ def _subcat_annual(spent, budgets, sub_id, year_elapsed) -> dict:
     annual_revised = sum(budgets.get((sub_id, m), (0.0, 0.0))[1] for m in MONTHS)
     annual_spent = sum(spent.get((sub_id, m), 0.0) for m in MONTHS)
     set_aside = 0.0
+    overspent = 0.0
     for m in range(1, year_elapsed + 1):
         revised = budgets.get((sub_id, m), (0.0, 0.0))[1]
         sp = spent.get((sub_id, m), 0.0)
+        # set_aside is floored at 0 (you can't set aside negative money) — overspend
+        # is tracked separately so the Set-Aside column can't read as "all is well".
         set_aside += max(0.0, revised - sp)
+        overspent += max(0.0, sp - revised)
     current = annual_spent + set_aside
     return {
         "initial": annual_initial,
         "revised": annual_revised,
         "spent": annual_spent,
         "set_aside": set_aside,
+        "overspent": overspent,
+        # Net budget slack left over after elapsed-month overspend is netted out.
+        "available": set_aside - overspent,
         "current": current,
         "remaining": annual_revised - current,
     }
@@ -208,7 +262,7 @@ def annual_rollup(db: Session, by: BudgetYear, user) -> dict:
 
     for cat in categories:
         items = []
-        sec_annual = {"initial": 0.0, "revised": 0.0, "spent": 0.0, "set_aside": 0.0, "current": 0.0, "remaining": 0.0}
+        sec_annual = {"initial": 0.0, "revised": 0.0, "spent": 0.0, "set_aside": 0.0, "overspent": 0.0, "available": 0.0, "current": 0.0, "remaining": 0.0}
         sec_month_spend = [0.0] * 12
         sec_month_budget = [0.0] * 12
         for sub in subs_by_cat.get(cat.id, []):
@@ -233,6 +287,8 @@ def annual_rollup(db: Session, by: BudgetYear, user) -> dict:
             status = "Watch"
         else:
             status = "OK"
+        # Forecast: extrapolate the elapsed-month burn rate to a full 12 months.
+        projected_annual = (ytd_spent / year_elapsed * 12) if year_elapsed else 0.0
         plan_vs_actual.append(
             {
                 "section": cat.name,
@@ -242,6 +298,8 @@ def annual_rollup(db: Session, by: BudgetYear, user) -> dict:
                 "variance": plan - sec_annual["current"],
                 "pct_of_ytd_budget": pct,
                 "status": status,
+                "projected_annual": projected_annual,
+                "projected_variance": plan - projected_annual,
             }
         )
 
@@ -259,6 +317,8 @@ def annual_rollup(db: Session, by: BudgetYear, user) -> dict:
             # Spent/current cover consumption only; investments are retained wealth.
             "spent": sum(s["totals"]["spent"] for s in sections if s["kind"] != "investment"),
             "current": sum(s["totals"]["current"] for s in sections if s["kind"] != "investment"),
+            "overspent": sum(s["totals"]["overspent"] for s in sections if s["kind"] != "investment"),
+            "available": sum(s["totals"]["available"] for s in sections if s["kind"] != "investment"),
             "invested": sum(s["totals"]["spent"] for s in sections if s["kind"] == "investment"),
             "income": income_total,
         },
