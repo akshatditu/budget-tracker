@@ -9,7 +9,7 @@ from sqlalchemy import select
 from app.core.database import SessionLocal
 from app.models import BudgetYear, Category, Subcategory, User
 
-DEFAULT_USER = {"email": "me@budget.local", "display_name": "Me", "currency": "INR"}
+DEFAULT_USER = {"email": "akshatav56@gmail.com", "display_name": "Akshat", "currency": "INR"}
 
 # Default structure derived from the user's Excel. Editable in the UI afterwards.
 STRUCTURE: dict[str, list[str]] = {

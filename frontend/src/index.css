@@ -13,7 +13,15 @@
   --color-investments: #8b5cf6;
 }
 
-html, body, #root {
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
   height: 100%;
 }
 
@@ -30,6 +38,7 @@ input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+
 input[type="number"] {
   -moz-appearance: textfield;
 }

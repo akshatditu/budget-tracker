@@ -24,7 +24,7 @@ export default function Settings() {
       <h1 className="text-xl font-semibold">Settings</h1>
 
       <Card title="Profile">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Display name"><Input value={name} onChange={(e) => setName(e.target.value)} /></Field>
           <Field label="Currency code">
             <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
@@ -55,7 +55,7 @@ export default function Settings() {
             </button>
           ))}
         </div>
-        <div className="grid grid-cols-3 items-end gap-3">
+        <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-3">
           <Field label="New year"><Input type="number" value={newYear} onChange={(e) => setNewYear(e.target.value)} /></Field>
           <Field label="Copy budgets from">
             <Select value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)}>

@@ -66,7 +66,8 @@ export default function Income() {
           {incomes.length === 0 ? (
             <EmptyState icon={Wallet} title="No income yet" hint="Add your salary above to get started." />
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[24rem] text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wide text-muted">
                   <th className="pb-2 font-medium">Month</th>
@@ -86,6 +87,7 @@ export default function Income() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </Card>
       </div>

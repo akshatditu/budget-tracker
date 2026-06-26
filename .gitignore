@@ -15,3 +15,7 @@ dist/
 # OS / editor
 .DS_Store
 *.log
+
+# Database dumps — contain real financial data, never commit
+budget_dump.sql
+backend/_docker_data_backup.sql

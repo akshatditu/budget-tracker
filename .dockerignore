@@ -1,0 +1,11 @@
+**/node_modules
+**/.venv
+.git
+.gitignore
+**/.env
+**/dist
+**/__pycache__
+**/.pytest_cache
+backend/_docker_data_backup.sql
+*.log
+.claude

@@ -116,7 +116,8 @@ function SectionTable({ section, year, month, onPickSub }: SectionTableProps) {
       }
       action={<span className="text-xs text-muted">{spentLabel} {money(section.totals.spent)} / {money(section.totals.revised)}</span>}
     >
-      <table className="w-full text-sm">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[30rem] text-sm">
         <thead>
           <tr className="text-left text-xs uppercase tracking-wide text-muted">
             <th className="pb-2 font-medium">Item</th>
@@ -161,6 +162,7 @@ function SectionTable({ section, year, month, onPickSub }: SectionTableProps) {
           </tr>
         </tfoot>
       </table>
+      </div>
       <div className="mt-3"><ProgressBar value={section.totals.spent} max={section.totals.revised} color={color} /></div>
     </Card>
   );
@@ -176,7 +178,7 @@ export default function MonthView() {
 
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_320px]">
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <KpiCard label="Income" value={money(s.income)} icon={Wallet} accent="var(--color-needs)" />
           <KpiCard label="Budget" value={money(s.budget_total)} icon={TrendingUp} accent="var(--color-brand)" />
@@ -190,7 +192,7 @@ export default function MonthView() {
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
         <IncomePanel year={year} month={month} />
         <Card title="Monthly Summary">
           <dl className="space-y-2 text-sm">

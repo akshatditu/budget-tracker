@@ -1,0 +1,24 @@
+# Render Blueprint: one free Docker web service that serves the API and the SPA.
+# Set the `sync: false` secrets in the Render dashboard after the first deploy.
+services:
+  - type: web
+    name: budget-tracker
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL          # Neon: postgresql+psycopg://USER:PASS@HOST/budget?sslmode=require
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: PUBLIC_BASE_URL       # https://<name>.onrender.com
+        sync: false
+      - key: CORS_ORIGINS          # https://<name>.onrender.com (same-origin; set to be safe)
+        sync: false
+      - key: SECRET_KEY            # session cookie signing key
+        generateValue: true
+      - key: ALLOWED_EMAILS
+        value: akshatav56@gmail.com

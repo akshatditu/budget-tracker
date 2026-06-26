@@ -55,7 +55,8 @@ export default function AnnualRollup() {
       <Grid title="Monthly Budget (Revised)" grid={data.budget_grid} monthNames={data.month_names} sections={data.sections} />
 
       <Card title="Plan vs Actual">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[40rem] text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-muted">
               <th className="pb-2 font-medium">Section</th>
@@ -79,16 +80,18 @@ export default function AnnualRollup() {
             ))}
           </tbody>
         </table>
+        </div>
       </Card>
 
       <Card title="Set Aside by Sub-item (saved for future spend)">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {data.sections.map((s) => (
-            <div key={s.name}>
+            <div key={s.name} className="min-w-0">
               <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: sectionColor(s.name) }} />{s.name}
               </h4>
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[28rem] text-sm">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wide text-muted">
                     <th className="pb-1 font-medium">Item</th>
@@ -110,6 +113,7 @@ export default function AnnualRollup() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           ))}
         </div>

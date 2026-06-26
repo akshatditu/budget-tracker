@@ -42,15 +42,15 @@ export default function BudgetSetup() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">{year} Budget Setup</h1>
           <p className="text-sm text-muted">Set each item's yearly budget — it auto-splits evenly across 12 months. Revise individual months in the Month view.</p>
         </div>
-        <Button variant="outline" onClick={() => setCatModal(true)}><FolderPlus size={16} /> Add section</Button>
+        <Button variant="outline" className="self-start" onClick={() => setCatModal(true)}><FolderPlus size={16} /> Add section</Button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card><div className="text-xs uppercase text-muted">Initial annual</div><div className="mt-1 text-2xl font-semibold">{money(grandInitial)}</div></Card>
         <Card><div className="text-xs uppercase text-muted">Revised annual (rolled up)</div><div className="mt-1 text-2xl font-semibold">{money(grandRevised)}</div></Card>
         <Card><div className="text-xs uppercase text-muted">Sections / Items</div><div className="mt-1 text-2xl font-semibold">{categories.length} / {subs.length}</div></Card>
@@ -62,7 +62,8 @@ export default function BudgetSetup() {
           title={<span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: sectionColor(cat.name) }} />{cat.name}</span>}
           action={<Button variant="ghost" onClick={() => { setAddingTo(cat.id); setNewSubName(""); }}><Plus size={16} /> Add item</Button>}
         >
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[34rem] text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wide text-muted">
                 <th className="pb-2 font-medium">Item</th>
@@ -109,6 +110,7 @@ export default function BudgetSetup() {
               )}
             </tbody>
           </table>
+          </div>
         </Card>
       ))}
 

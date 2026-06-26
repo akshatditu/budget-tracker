@@ -72,12 +72,12 @@ export default function Transactions() {
       <Card
         title={`Ledger (${txns.length}) · ${money(total)}`}
         action={
-          <div className="flex gap-2">
-            <Select value={fMonth} onChange={(e) => setFMonth(e.target.value)} className="w-36">
+          <div className="flex flex-wrap gap-2">
+            <Select value={fMonth} onChange={(e) => setFMonth(e.target.value)} className="w-32 sm:w-36">
               <option value="">All months</option>
               {MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
             </Select>
-            <Select value={fSub} onChange={(e) => setFSub(e.target.value)} className="w-44">
+            <Select value={fSub} onChange={(e) => setFSub(e.target.value)} className="w-36 sm:w-44">
               <option value="">All items</option>
               {subs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </Select>
@@ -87,7 +87,8 @@ export default function Transactions() {
         {txns.length === 0 ? (
           <EmptyState icon={Receipt} title="No transactions" hint="Add an expense above, or click a Spent cell in the Month view." />
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[32rem] text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wide text-muted">
                 <th className="pb-2 font-medium">Date</th>
@@ -109,6 +110,7 @@ export default function Transactions() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </Card>
     </div>

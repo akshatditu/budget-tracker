@@ -1,6 +1,6 @@
-"""Auth seam. Until JWT login lands (phase 2), every request resolves to the
-single seeded user. Swapping in real auth means only changing this function."""
-from fastapi import Depends, HTTPException
+"""Auth seam. The signed session cookie (set by routers/auth.py after Google SSO)
+carries the logged-in user's email; every request resolves the user from it."""
+from fastapi import Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -8,10 +8,13 @@ from app.core.database import get_db
 from app.models import BudgetYear, User
 
 
-def get_current_user(db: Session = Depends(get_db)) -> User:
-    user = db.scalars(select(User).order_by(User.id)).first()
+def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
+    email = request.session.get("user_email")
+    if not email:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    user = db.scalars(select(User).where(User.email == email)).first()
     if user is None:
-        raise HTTPException(status_code=500, detail="No user seeded. Run `python -m app.seed`.")
+        raise HTTPException(status_code=401, detail="Not authenticated")
     return user
 
 

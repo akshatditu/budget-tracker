@@ -1,6 +1,8 @@
 import { Routes, Route } from "react-router-dom";
 import { AppProvider } from "./lib/AppContext";
+import { useAuth, useAuthExpiryListener } from "./lib/auth";
 import Layout from "./components/Layout";
+import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import MonthView from "./pages/MonthView";
 import AnnualRollup from "./pages/AnnualRollup";
@@ -10,6 +12,17 @@ import Income from "./pages/Income";
 import Settings from "./pages/Settings";
 
 export default function App() {
+  useAuthExpiryListener();
+  const { data: user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="grid h-full place-items-center text-sm text-muted">Loading…</div>
+    );
+  }
+
+  if (!user) return <Login />;
+
   return (
     <AppProvider>
       <Layout>

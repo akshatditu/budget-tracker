@@ -19,9 +19,9 @@ interface CardProps {
 
 export function Card({ title, action, children, className = "" }: CardProps) {
   return (
-    <div className={`rounded-xl border border-line bg-surface shadow-sm ${className}`}>
+    <div className={`min-w-0 rounded-xl border border-line bg-surface shadow-sm ${className}`}>
       {(title || action) && (
-        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
           <h3 className="text-sm font-semibold text-ink">{title}</h3>
           {action}
         </div>
@@ -41,16 +41,16 @@ interface KpiCardProps {
 
 export function KpiCard({ label, value, sub, accent = "var(--color-brand)", icon: Icon }: KpiCardProps) {
   return (
-    <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted">{label}</span>
+    <div className="min-w-0 rounded-xl border border-line bg-surface p-4 shadow-sm">
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate text-xs font-medium uppercase tracking-wide text-muted">{label}</span>
         {Icon && (
           <span className="rounded-lg p-1.5" style={{ background: `${accent}1a`, color: accent }}>
             <Icon size={16} />
           </span>
         )}
       </div>
-      <div className="mt-2 text-2xl font-semibold text-ink">{value}</div>
+      <div className="mt-2 text-xl font-semibold text-ink sm:text-2xl">{value}</div>
       {sub && <div className="mt-1 text-xs text-muted">{sub}</div>}
     </div>
   );
@@ -195,7 +195,7 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand ${props.className || ""}`}
+      className={`w-full min-w-0 rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand ${props.className || ""}`}
     />
   );
 }
@@ -204,7 +204,7 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
       {...props}
-      className={`w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-brand ${props.className || ""}`}
+      className={`w-full min-w-0 rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-brand ${props.className || ""}`}
     />
   );
 }

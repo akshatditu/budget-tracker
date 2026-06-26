@@ -82,7 +82,8 @@ export default function Dashboard() {
               <Bar dataKey="ytd_spent" name="YTD spent" fill="var(--color-brand)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-          <table className="w-full self-start text-sm">
+          <div className="min-w-0 self-start overflow-x-auto">
+          <table className="w-full min-w-[22rem] text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wide text-muted">
                 <th className="pb-2 font-medium">Section</th>
@@ -102,6 +103,7 @@ export default function Dashboard() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </Card>
     </div>
