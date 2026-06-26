@@ -352,13 +352,18 @@ export interface GoalSubcategoryLink {
   id: number;
   subcategory_id: number | null;
   subcategory_name: string | null;
-  /** Percentage 0–100 of that subcategory's monthly unspent budget credited to this goal. */
-  weight: number;
+  /** Computed at read time: min(goal.target, available_pool) / subcat_unspent * 100 */
+  auto_weight: number;
 }
 
 export interface GoalSubcategoryLinkCreate {
   subcategory_id: number;
-  weight: number;
+}
+
+export interface SubcatUnspent {
+  unspent: number;
+  claimed: number;
+  available: number;
 }
 
 export interface Goal {

@@ -31,6 +31,7 @@ import type {
   Subcategory,
   SubcategoryCreate,
   SubcategoryUpdate,
+  SubcatUnspent,
   Transaction,
   TransactionCreate,
   TransactionFilter,
@@ -252,6 +253,14 @@ export const useGoals = (includeArchived = false) =>
     queryFn: () => get<Goal[]>("/goals", { include_archived: includeArchived }),
   });
 
+export const useSubcatUnspent = (subcatId: number | null) =>
+  useQuery({
+    queryKey: ["subcat-unspent", subcatId],
+    queryFn: () => get<SubcatUnspent>(`/goals/subcategory-unspent?subcategory_id=${subcatId}`),
+    enabled: subcatId !== null,
+    staleTime: 0, // always refetch — value changes as budget/spend changes
+  });
+
 export const useGoalContributions = (goalId: number | null) =>
   useQuery({
     queryKey: ["goal-contributions", goalId],
@@ -291,11 +300,6 @@ export const useGoalMutations = () => {
     addLink: useMutation({
       mutationFn: ({ goalId, ...b }: GoalSubcategoryLinkCreate & { goalId: number }) =>
         api.post<Goal>(`/goals/${goalId}/links`, b),
-      onSuccess: done,
-    }),
-    updateLink: useMutation({
-      mutationFn: ({ goalId, linkId, weight }: { goalId: number; linkId: number; weight: number }) =>
-        api.patch<Goal>(`/goals/${goalId}/links/${linkId}`, { weight }),
       onSuccess: done,
     }),
     removeLink: useMutation({

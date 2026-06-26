@@ -1,12 +1,11 @@
-import { useState, type FormEvent } from "react";
+﻿import { useState, type FormEvent } from "react";
 import { Plus, Trash2, Target, PiggyBank, Link2, AlertTriangle } from "lucide-react";
-import { useGoals, useGoalMutations, useGoalContributions, useCategories, useSubcategories, useAnnualBudget } from "../api/hooks";
-import { useApp } from "../lib/AppContext";
+import { useGoals, useGoalMutations, useGoalContributions, useCategories, useSubcategories, useSubcatUnspent } from "../api/hooks";
 import { money, pct } from "../lib/format";
 import {
   Card, Button, Modal, Field, Input, Select, ProgressBar, EmptyState,
 } from "../components/ui";
-import type { Goal, GoalSubcategoryLink } from "../types/api";
+import type { Goal } from "../types/api";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -25,120 +24,56 @@ function OnTrackChip({ goal }: { goal: Goal }) {
 }
 
 function ManageLinksModal({ goal, onClose }: { goal: Goal; onClose: () => void }) {
-  const { year } = useApp();
-  const { data: allGoals = [] } = useGoals();
   const { data: categories = [] } = useCategories();
   const { data: subcategories = [] } = useSubcategories();
-  const { data: annualBudget = [] } = useAnnualBudget(year);
-  const { addLink, updateLink, removeLink } = useGoalMutations();
+  const { addLink, removeLink } = useGoalMutations();
 
   const [newSubcatId, setNewSubcatId] = useState<number | null>(null);
-  const [editWeights, setEditWeights] = useState<Record<number, string>>(() =>
-    Object.fromEntries(goal.links.map((l) => [l.id, String(l.weight)]))
-  );
-
-  // Auto-weight = goal.target_amount / subcategory.revised_annual * 100, capped at 100.
-  // Returns null when the subcategory has no annual budget set yet.
-  const calcAutoWeight = (subcatId: number | null): number | null => {
-    if (!subcatId) return null;
-    const row = annualBudget.find((r) => r.subcategory_id === subcatId);
-    if (!row || row.revised_annual <= 0) return null;
-    return Math.min(100, (goal.target_amount / row.revised_annual) * 100);
-  };
-
-  const getRevisedAnnual = (subcatId: number | null): number =>
-    annualBudget.find((r) => r.subcategory_id === subcatId)?.revised_annual ?? 0;
-
-  // Total weight per subcategory across ALL goals (for over-allocation warning).
-  const totalWeightForSubcat = (subcatId: number | null): number => {
-    if (subcatId === null) return 0;
-    return allGoals
-      .flatMap((g) => g.links)
-      .filter((l) => l.subcategory_id === subcatId)
-      .reduce((sum, l) => sum + l.weight, 0);
-  };
+  const { data: subcatPool } = useSubcatUnspent(newSubcatId);
 
   const linkedSubcatIds = new Set(goal.links.map((l) => l.subcategory_id));
   const availableSubs = subcategories.filter((s) => !linkedSubcatIds.has(s.id));
 
-  const autoWeight = calcAutoWeight(newSubcatId);
-  const newSubcatRevised = getRevisedAnnual(newSubcatId);
-
+  // Compare at whole-rupee precision — the same precision money() displays — so a
+  // sub-rupee gap (e.g. ₹21,256.98 vs ₹21,257) that the UI rounds to equal numbers
+  // doesn't silently block the link.
+  const canAdd = !!newSubcatId && !!subcatPool && Math.round(subcatPool.available) >= Math.round(goal.target_amount);
+  const insufficientPool = !!newSubcatId && !!subcatPool && Math.round(subcatPool.available) < Math.round(goal.target_amount);
   const handleAddLink = () => {
-    if (!newSubcatId || autoWeight === null) return;
+    if (!newSubcatId || !canAdd) return;
     addLink.mutate(
-      { goalId: goal.id, subcategory_id: newSubcatId, weight: autoWeight },
+      { goalId: goal.id, subcategory_id: newSubcatId },
       { onSuccess: () => setNewSubcatId(null) }
     );
   };
 
-  const handleSaveWeight = (link: GoalSubcategoryLink) => {
-    const w = Number(editWeights[link.id]);
-    if (!w || w <= 0) return;
-    updateLink.mutate({ goalId: goal.id, linkId: link.id, weight: w });
-  };
-
-  const thisGoalTotal = goal.links.reduce((sum, l) => sum + l.weight, 0);
-
   return (
     <Modal open onClose={onClose} title={`Linked subcategories — ${goal.name}`}>
       <p className="mb-3 text-sm text-muted">
-        Each linked subcategory contributes its monthly unspent budget to this goal, scaled by its weight.
-        When no links exist the goal uses manual contributions instead.
+        Each linked subcategory contributes its unspent budget toward this goal (up to the goal target),
+        after higher-priority links are served. When no links exist the goal uses manual contributions instead.
       </p>
 
       {goal.links.length === 0 ? (
         <p className="py-4 text-center text-sm text-muted">No links yet — add one below.</p>
       ) : (
         <div className="mb-4 space-y-2">
-          {goal.links.map((link) => {
-            const total = totalWeightForSubcat(link.subcategory_id);
-            const suggested = calcAutoWeight(link.subcategory_id);
-            return (
-              <div key={link.id} className="space-y-1">
-                <div className="flex items-center gap-2 rounded-lg border border-line px-3 py-2">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{link.subcategory_name ?? "—"}</p>
-                    {suggested !== null && Math.abs(suggested - link.weight) > 0.1 && (
-                      <p className="text-xs text-muted">suggested: {suggested.toFixed(1)}%</p>
-                    )}
-                  </div>
-                  <div className="w-20">
-                    <Input
-                      type="number"
-                      className="text-right"
-                      value={editWeights[link.id] ?? String(link.weight)}
-                      onChange={(e) => setEditWeights((prev) => ({ ...prev, [link.id]: e.target.value }))}
-                    />
-                  </div>
-                  <span className="text-sm text-muted">%</span>
-                  <button
-                    className="text-xs text-brand hover:underline disabled:opacity-50"
-                    onClick={() => handleSaveWeight(link)}
-                    disabled={updateLink.isPending}
-                  >
-                    Save
-                  </button>
-                  <button
-                    className="text-muted hover:text-red-600"
-                    onClick={() => removeLink.mutate({ goalId: goal.id, linkId: link.id })}
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-                {total > 100 && (
-                  <div className="flex items-center gap-1.5 rounded bg-amber-50 px-2 py-1 text-xs text-amber-700">
-                    <AlertTriangle size={12} />
-                    {link.subcategory_name} is over-allocated ({total.toFixed(0)}% across all goals).
-                    Some goals may receive less than expected.
-                  </div>
-                )}
+          {goal.links.map((link) => (
+            <div key={link.id} className="flex items-center gap-2 rounded-lg border border-line px-3 py-2">
+              <div className="flex-1">
+                <p className="text-sm font-medium">{link.subcategory_name ?? "—"}</p>
               </div>
-            );
-          })}
-          <p className="text-right text-xs text-muted">
-            This goal’s total: <span className="font-medium">{thisGoalTotal.toFixed(0)}%</span>
-          </p>
+              <span className="rounded-md bg-slate-100 px-2 py-0.5 text-sm text-muted">
+                {link.auto_weight.toFixed(1)}%
+              </span>
+              <button
+                className="text-muted hover:text-red-600"
+                onClick={() => removeLink.mutate({ goalId: goal.id, linkId: link.id })}
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -162,25 +97,31 @@ function ManageLinksModal({ goal, onClose }: { goal: Goal; onClose: () => void }
               })}
             </Select>
           </div>
-          {/* Weight is auto-calculated from goal target ÷ subcategory annual budget — read-only */}
-          <div className="flex w-28 shrink-0 items-center justify-end gap-1 rounded-lg border border-line bg-slate-50 px-3 py-2 text-sm">
-            <span className="font-medium">{autoWeight !== null ? autoWeight.toFixed(1) : "—"}</span>
-            <span className="text-muted">%</span>
-          </div>
           <Button
             onClick={handleAddLink}
-            disabled={!newSubcatId || autoWeight === null || addLink.isPending}
-            title={autoWeight === null ? "Set an annual budget for this subcategory first" : undefined}
+            disabled={!canAdd || addLink.isPending}
+            title={insufficientPool ? "Insufficient unspent budget — revise the subcategory budget first" : undefined}
           >
             <Plus size={16} />
           </Button>
         </div>
-        {newSubcatId && (
-          <p className="mt-2 text-xs text-muted">
-            {newSubcatRevised > 0
-              ? `Annual budget: ${money(newSubcatRevised)}  ·  Goal target: ${money(goal.target_amount)}  →  auto-weight: ${(autoWeight ?? 0).toFixed(1)}%`
-              : "⚠ No annual budget set for this subcategory — set one in Budget Setup first."}
-          </p>
+        {newSubcatId && subcatPool && (
+          <div className="mt-2 text-xs">
+            {insufficientPool ? (
+              <div className="flex items-center gap-1.5 rounded bg-amber-50 px-2 py-1.5 text-amber-700">
+                <AlertTriangle size={12} className="shrink-0" />
+                Only {money(subcatPool.available)} available (unspent {money(subcatPool.unspent)} − claimed by other goals {money(subcatPool.claimed)}).
+                Increase the subcategory budget by at least {money(goal.target_amount - subcatPool.available)} to link.
+              </div>
+            ) : (
+              <p className="text-muted">
+                Unspent: {money(subcatPool.unspent)} · Claimed by other goals: {money(subcatPool.claimed)} · Available: {money(subcatPool.available)}
+              </p>
+            )}
+          </div>
+        )}
+        {newSubcatId && !subcatPool && (
+          <p className="mt-2 text-xs text-muted">Loading budget data…</p>
         )}
       </div>
     </Modal>
@@ -277,7 +218,7 @@ function GoalCard({ goal }: { goal: Goal }) {
           >
             {goal.links.map((l) => (
               <span key={l.id} className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-xs font-medium text-brand">
-                <Link2 size={10} />{l.subcategory_name ?? "—"} {l.weight}%
+                <Link2 size={10} />{l.subcategory_name ?? "—"} {l.auto_weight.toFixed(1)}%
               </span>
             ))}
             <span className="ml-auto text-xs text-muted">Auto-tracked</span>

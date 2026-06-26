@@ -13,7 +13,6 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
-    Numeric,
     String,
     UniqueConstraint,
     func,
@@ -202,10 +201,10 @@ class GoalContribution(Base):
 
 
 class GoalSubcategoryLink(Base):
-    """Junction row linking a Goal to a Subcategory with a weight (0–100 %).
-    A goal can link to multiple subcategories; a subcategory can link to multiple
-    goals. `saved` for a goal = Σ (weight/100 × max(0, revised−spent)) per elapsed
-    month, summed across all links."""
+    """Junction row linking a Goal to a Subcategory. No weight stored — contribution
+    is computed dynamically as min(goal.target, max(0, subcat_unspent - prior_claims))
+    where prior_claims = sum of target_amounts of goals linked to this subcategory
+    via links with a lower id (first-linked = first-served)."""
 
     __tablename__ = "goal_subcategory_links"
     __table_args__ = (
@@ -218,9 +217,6 @@ class GoalSubcategoryLink(Base):
     subcategory_id: Mapped[int | None] = mapped_column(
         ForeignKey("subcategories.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    # Percentage 0–100 (supports decimals like 33.33). Stored as plain Numeric — not
-    # encrypted, it's not a money amount.
-    weight: Mapped[float] = mapped_column(Numeric(5, 2), default=100)
 
     goal: Mapped[Goal] = relationship(back_populates="subcat_links")
 
