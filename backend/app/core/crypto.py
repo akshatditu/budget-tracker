@@ -33,19 +33,27 @@ def _build_cipher() -> MultiFernet:
     return MultiFernet([Fernet(k.encode()) for k in keys])
 
 
-# Built once at import. The first key encrypts; any key can decrypt (rotation).
-cipher = _build_cipher()
+# Lazily initialised on first use so that Alembic can import models (for schema
+# autogenerate) without requiring ENCRYPTION_KEY to be set at migration time.
+_cipher: MultiFernet | None = None
+
+
+def _get_cipher() -> MultiFernet:
+    global _cipher
+    if _cipher is None:
+        _cipher = _build_cipher()
+    return _cipher
 
 
 def encrypt_amount(value) -> str:
     """Decimal | float | int -> Fernet token (str). Stores a canonical decimal string."""
-    token = cipher.encrypt(str(Decimal(str(value))).encode())
+    token = _get_cipher().encrypt(str(Decimal(str(value))).encode())
     return token.decode()
 
 
 def decrypt_amount(token: str) -> Decimal:
     """Fernet token (str) -> Decimal."""
-    return Decimal(cipher.decrypt(token.encode()).decode())
+    return Decimal(_get_cipher().decrypt(token.encode()).decode())
 
 
 class EncryptedNumeric(TypeDecorator):

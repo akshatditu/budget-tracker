@@ -79,13 +79,4 @@ def logout(request: Request):
     return {"status": "ok"}
 
 
-@router.delete("/admin/users/{email}", status_code=204, tags=["admin"])
-def delete_user_by_email(email: str, db: Session = Depends(get_db)):
-    """Delete a user and all their data by email address.
-    No auth required — intended for local dev/test resets only."""
-    user = db.scalars(select(User).where(User.email == email.lower())).first()
-    if user is None:
-        raise HTTPException(status_code=404, detail=f"No user found with email {email!r}")
-    db.delete(user)
-    db.commit()
-    return None
+

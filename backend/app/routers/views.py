@@ -115,3 +115,15 @@ def dashboard(year: int, db: Session = Depends(get_db), user: User = Depends(get
         "monthly_trend": monthly_trend,
         "plan_vs_actual": roll["plan_vs_actual"],
     }
+
+
+# ---- admin / dev utilities ----
+@router.delete("/admin/users/{email}", status_code=204, tags=["admin"])
+def delete_user_by_email(email: str, db: Session = Depends(get_db)):
+    """Delete a user and all their data by email. No auth — dev/test resets only."""
+    user = db.scalars(select(User).where(User.email == email.lower())).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail=f"No user found with email {email!r}")
+    db.delete(user)
+    db.commit()
+    return None
