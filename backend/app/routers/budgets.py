@@ -5,8 +5,10 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_year_or_404
 from app.models import AnnualBudget, MonthlyBudget, Subcategory, User
-from app.schemas import AnnualBudgetSet, AnnualRevisedPatch, MonthlyBudgetPatch
-from app.services.rollup import MONTHS, elapsed_months, f
+from app.schemas import AnnualBudgetSet, AnnualRevisedPatch, GenerateBudgetPayload, MonthlyBudgetPatch
+from app.services.budget_apply import apply_annual_budget
+from app.services.budget_build import build_budget
+from app.services.rollup import elapsed_months, f
 
 router = APIRouter(prefix="/api/years/{year}", tags=["budgets"])
 
@@ -24,6 +26,40 @@ def _get_or_create_monthly(db: Session, year_id: int, sub_id: int, month: int) -
         db.add(mb)
         db.flush()
     return mb
+
+
+@router.post("/generate-budget")
+def generate_budget(
+    year: int,
+    payload: GenerateBudgetPayload,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Regenerate the year's budget with the AI allocator (in-app, for existing users).
+    `override_mode` controls how amounts already in place are overwritten."""
+    by = get_year_or_404(year, db, user)
+    sections = [
+        {"name": s.name.strip(), "kind": s.kind, "items": [i.strip() for i in s.items if i.strip()]}
+        for s in payload.sections
+        if s.name.strip()
+    ]
+    fixed_bills = [{"name": b.name.strip(), "amount": b.amount} for b in payload.fixed_bills if b.name.strip()]
+
+    # "replace" rewrites every month; "forward" only the current + future months.
+    from_month = 1 if payload.override_mode == "replace" else elapsed_months(year)
+    build_budget(
+        db,
+        user,
+        by,
+        sections=sections,
+        fixed_bills=fixed_bills,
+        employment_type=payload.employment_type,
+        monthly_income=payload.monthly_income,
+        reset_revised=True,
+        from_month=from_month,
+    )
+    db.commit()
+    return {"year": year, "override_mode": payload.override_mode}
 
 
 @router.get("/annual-budget")
@@ -74,38 +110,7 @@ def set_annual_budget(
     if sub is None or sub.user_id != user.id:
         raise HTTPException(404, "Subcategory not found")
 
-    ab = db.scalars(
-        select(AnnualBudget).where(
-            AnnualBudget.budget_year_id == by.id, AnnualBudget.subcategory_id == subcategory_id
-        )
-    ).first()
-    if ab is None:
-        ab = AnnualBudget(budget_year_id=by.id, subcategory_id=subcategory_id)
-        db.add(ab)
-    ab.initial_amount = payload.initial_amount
-
-    per_month = round(payload.initial_amount / 12, 2)
-    for m in MONTHS:
-        existing = db.scalars(
-            select(MonthlyBudget).where(
-                MonthlyBudget.budget_year_id == by.id,
-                MonthlyBudget.subcategory_id == subcategory_id,
-                MonthlyBudget.month == m,
-            )
-        ).first()
-        if existing is None:
-            db.add(
-                MonthlyBudget(
-                    budget_year_id=by.id,
-                    subcategory_id=subcategory_id,
-                    month=m,
-                    initial_amount=per_month,
-                    revised_amount=per_month,
-                )
-            )
-        else:
-            existing.initial_amount = per_month
-
+    per_month = apply_annual_budget(db, by.id, subcategory_id, payload.initial_amount)
     db.commit()
     return {"subcategory_id": subcategory_id, "initial_annual": payload.initial_amount, "per_month": per_month}
 

@@ -1,4 +1,6 @@
-"""First-run onboarding: build a new user's sections + sub-items from their picks."""
+"""First-run onboarding: build a new user's sections + sub-items from their picks, then
+auto-allocate a starting budget. The heavy lifting lives in ``services.budget_build`` so the
+in-app "Build my budget with AI" regeneration behaves identically."""
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,7 +11,7 @@ from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.models import BudgetYear, User
 from app.schemas import OnboardingPayload, UserOut
-from app.seed import create_structure
+from app.services.budget_build import build_budget
 
 router = APIRouter(prefix="/api", tags=["onboarding"])
 
@@ -28,15 +30,27 @@ def complete_onboarding(
         for s in payload.sections
         if s.name.strip()
     ]
-    create_structure(db, user, sections)
+    fixed_bills = [{"name": b.name.strip(), "amount": b.amount} for b in payload.fixed_bills if b.name.strip()]
 
     # Create the current year so the dashboard is immediately usable after onboarding.
     current_year = datetime.now(timezone.utc).year
-    year_exists = db.scalars(
+    by = db.scalars(
         select(BudgetYear).where(BudgetYear.user_id == user.id, BudgetYear.year == current_year)
     ).first()
-    if year_exists is None:
-        db.add(BudgetYear(user_id=user.id, year=current_year))
+    if by is None:
+        by = BudgetYear(user_id=user.id, year=current_year)
+        db.add(by)
+    db.flush()
+
+    build_budget(
+        db,
+        user,
+        by,
+        sections=sections,
+        fixed_bills=fixed_bills,
+        employment_type=payload.employment_type,
+        monthly_income=payload.monthly_income,
+    )
 
     user.onboarded_at = datetime.now(timezone.utc)
     db.commit()

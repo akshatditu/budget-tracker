@@ -6,6 +6,7 @@ import {
 } from "../api/hooks";
 import { money, sectionColor } from "../lib/format";
 import { Card, EditableNumber, Button, Input, Modal, Field } from "../components/ui";
+import RegenerateBudget from "../components/RegenerateBudget";
 import type { AnnualBudgetRow } from "../types/api";
 
 export default function BudgetSetup() {
@@ -47,7 +48,10 @@ export default function BudgetSetup() {
           <h1 className="text-xl font-semibold">{year} Budget Setup</h1>
           <p className="text-sm text-muted">Set each item's yearly budget — it auto-splits evenly across 12 months. Revise individual months in the Month view.</p>
         </div>
-        <Button variant="outline" className="self-start" onClick={() => setCatModal(true)}><FolderPlus size={16} /> Add section</Button>
+        <div className="flex items-center gap-2 self-start">
+          <RegenerateBudget />
+          <Button variant="outline" onClick={() => setCatModal(true)}><FolderPlus size={16} /> Add section</Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

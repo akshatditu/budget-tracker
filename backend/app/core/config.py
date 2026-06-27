@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     # WARNING: losing this key makes every stored amount permanently unreadable.
     encryption_key: str = ""
 
+    # --- AI budget generation (onboarding) ---
+    # OpenAI key used to allocate the first-run budget. Blank is fine: onboarding
+    # falls back to a deterministic rule-based split when this is unset or the call fails.
+    openai_api_key: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

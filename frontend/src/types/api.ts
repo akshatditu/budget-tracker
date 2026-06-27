@@ -24,8 +24,20 @@ export interface OnboardingSection {
   items: string[];
 }
 
+export interface FixedBill {
+  name: string;
+  amount: number;
+}
+
 export interface OnboardingPayload {
   sections: OnboardingSection[];
+  employment_type?: "salaried" | "business";
+  monthly_income?: number;
+  fixed_bills?: FixedBill[];
+}
+
+export interface GenerateBudgetPayload extends OnboardingPayload {
+  override_mode: "replace" | "forward";
 }
 
 export interface UserUpdate {

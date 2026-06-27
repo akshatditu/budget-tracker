@@ -18,6 +18,7 @@ import type {
   GoalCreate,
   GoalSubcategoryLinkCreate,
   GoalUpdate,
+  GenerateBudgetPayload,
   Income,
   IncomeCreate,
   IncomeUpdate,
@@ -125,6 +126,19 @@ export const useCatalogMutations = (year: number) => {
       onSuccess: done,
     }),
   };
+};
+
+// ---- AI budget regeneration (existing users) ----
+export const useRegenerateBudget = (year: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: GenerateBudgetPayload) =>
+      api.post(`/years/${year}/generate-budget`, body).then((r) => r.data),
+    onSuccess: () => {
+      invalidateAll(qc, year); // categories, subcategories, year, month/rollup/dashboard
+      ["annual-budget", "incomes"].forEach((k) => qc.invalidateQueries({ queryKey: [k, year] }));
+    },
+  });
 };
 
 // ---- budgets ----

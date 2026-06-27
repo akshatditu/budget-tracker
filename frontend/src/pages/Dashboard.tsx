@@ -8,6 +8,7 @@ import { useApp } from "../lib/AppContext";
 import { useDashboard } from "../api/hooks";
 import { money, moneyCompact, moneyChart, pct, sectionColor } from "../lib/format";
 import { Card, KpiCard, StatusChip } from "../components/ui";
+import RegenerateBudget from "../components/RegenerateBudget";
 
 export default function Dashboard() {
   const { year } = useApp();
@@ -23,9 +24,12 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{year} Overview</h1>
-        <Link to="/month" className="flex items-center gap-1 text-sm font-medium text-brand">
-          Go to month view <ArrowRight size={16} />
-        </Link>
+        <div className="flex items-center gap-3">
+          <RegenerateBudget />
+          <Link to="/month" className="flex items-center gap-1 text-sm font-medium text-brand">
+            Go to month view <ArrowRight size={16} />
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">

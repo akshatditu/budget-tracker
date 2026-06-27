@@ -28,8 +28,23 @@ class OnboardingSection(BaseModel):
     items: list[str] = []
 
 
+class FixedBill(BaseModel):
+    name: str
+    amount: float  # exact monthly amount (rent, EMI, ...) — assigned directly, not AI-allocated
+
+
 class OnboardingPayload(BaseModel):
     sections: list[OnboardingSection]
+    employment_type: Optional[str] = None  # "salaried" | "business"
+    monthly_income: Optional[float] = None
+    fixed_bills: list[FixedBill] = []
+
+
+class GenerateBudgetPayload(OnboardingPayload):
+    # How to apply the new amounts to a year that already has numbers:
+    #   "replace" — overwrite Initial + Revised for all 12 months
+    #   "forward" — update Initial; reset Revised only for the current + future months
+    override_mode: str = "forward"
 
 
 class UserUpdate(BaseModel):

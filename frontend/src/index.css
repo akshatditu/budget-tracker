@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Class-based dark mode, scoped to any subtree carrying `.dark`.
+   Only the landing page opts in, so the authenticated app is unaffected. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-ink: #0f172a;
   --color-muted: #64748b;
@@ -41,4 +45,49 @@ input[type="number"]::-webkit-inner-spin-button {
 
 input[type="number"] {
   -moz-appearance: textfield;
+}
+
+/* ── Landing-page motion primitives (CSS handles the always-on, looping
+   animations; Framer Motion drives scroll/interaction choreography) ── */
+@keyframes lp-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+@keyframes lp-float-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-22px); }
+}
+@keyframes lp-gradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+@keyframes lp-pulse-glow {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+@keyframes lp-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.lp-float { animation: lp-float 6s ease-in-out infinite; }
+.lp-float-slow { animation: lp-float-slow 8s ease-in-out infinite; }
+.lp-animate-gradient {
+  background-size: 200% 200%;
+  animation: lp-gradient 8s ease infinite;
+}
+.lp-pulse-glow { animation: lp-pulse-glow 4s ease-in-out infinite; }
+.lp-caret::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: currentColor;
+  animation: lp-blink 1s step-end infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-float, .lp-float-slow, .lp-animate-gradient, .lp-pulse-glow { animation: none; }
 }

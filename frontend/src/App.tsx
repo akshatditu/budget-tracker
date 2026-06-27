@@ -3,6 +3,7 @@ import { AppProvider } from "./lib/AppContext";
 import { useAuth, useAuthExpiryListener } from "./lib/auth";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
+import Landing from "./pages/Landing";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import MonthView from "./pages/MonthView";
@@ -25,7 +26,16 @@ export default function App() {
     );
   }
 
-  if (!user) return <Login />;
+  // Signed-out visitors see the marketing landing page; /login keeps the bare
+  // Google sign-in card reachable. Both route into the same OAuth flow.
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<Landing />} />
+      </Routes>
+    );
+  }
 
   // First-run users build their sections before entering the app.
   if (!user.onboarded) return <Onboarding />;
