@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap");
 @import "tailwindcss";
 
 /* Class-based dark mode, scoped to any subtree carrying `.dark`.
@@ -15,6 +16,97 @@
   --color-needs: #10b981;
   --color-wants: #f59e0b;
   --color-investments: #8b5cf6;
+
+  /* New design tokens (BudgetIQ redesign). Defaults are the "calm light"
+     palette; inside `.app` they are remapped to the live theme variables. */
+  --color-surface2: #f5f6f8;
+  --color-dim: #5c6573;
+  --color-faint: #99a1af;
+  --color-accent: #0f9d8f;
+  --color-accent2: #0b7d72;
+  --color-accentsoft: #dcf4ef;
+  --color-pos: #0f9d8f;
+  --color-neg: #e0524b;
+  --color-warn: #df8c2f;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   BudgetIQ design system. The authenticated app is wrapped in `.app` with
+   `data-theme` (light|dark) × `data-dir` (calm|bold). Four palettes drive a
+   set of CSS variables; the existing semantic Tailwind tokens are remapped
+   onto them so all existing utility classes (`bg-surface`, `text-muted`, …)
+   re-theme automatically. Landing/login live outside `.app` and keep the
+   original `@theme` values untouched.
+   ────────────────────────────────────────────────────────────────────── */
+.app {
+  /* calm · light (default) */
+  --page: #dfe2e8; --bg: #f4f5f7; --surface: #ffffff; --surface2: #f5f6f8;
+  --text: #191c22; --dim: #5c6573; --faint: #99a1af; --border: #edeef2;
+  --accent: #0f9d8f; --accent2: #0b7d72; --accentSoft: #dcf4ef;
+  --pos: #0f9d8f; --neg: #e0524b; --warn: #df8c2f;
+  --radius: 20px; --radiusSm: 14px; --radiusXs: 11px;
+  --font-ui: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-num: "Plus Jakarta Sans", sans-serif;
+  --shadow: 0 1px 2px rgba(20, 28, 46, .05), 0 12px 30px rgba(20, 28, 46, .05);
+
+  /* remap semantic + new tokens onto the live theme vars (all variants) */
+  --color-ink: var(--text); --color-muted: var(--dim); --color-line: var(--border);
+  --color-surface: var(--surface); --color-canvas: var(--bg); --color-brand: var(--accent);
+  --color-surface2: var(--surface2); --color-dim: var(--dim); --color-faint: var(--faint);
+  --color-accent: var(--accent); --color-accent2: var(--accent2); --color-accentsoft: var(--accentSoft);
+  --color-pos: var(--pos); --color-neg: var(--neg); --color-warn: var(--warn);
+
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--text);
+}
+.app[data-theme="dark"][data-dir="calm"] {
+  --page: #050608; --bg: #0f1217; --surface: #181c23; --surface2: #202530;
+  --text: #eef1f6; --dim: #9aa3b2; --faint: #646d7c; --border: #262c37;
+  --accent: #2dd4bf; --accent2: #5eead4; --accentSoft: #11302c;
+  --pos: #34d399; --neg: #f87171; --warn: #fbbf24;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 14px 34px rgba(0, 0, 0, .4);
+}
+.app[data-dir="bold"] {
+  --page: #e3dff0; --bg: #efedf5; --surface: #ffffff; --surface2: #f3f1fa;
+  --text: #15121f; --dim: #5b5472; --faint: #938ba8; --border: #e8e4f1;
+  --accent: #6d28d9; --accent2: #5b21b6; --accentSoft: #ece6fe;
+  --pos: #0f9d8f; --neg: #dc2626; --warn: #d97706;
+  --radius: 13px; --radiusSm: 9px; --radiusXs: 7px;
+  --font-ui: "Space Grotesk", system-ui, sans-serif;
+  --font-num: "Space Mono", ui-monospace, monospace;
+  --shadow: 0 2px 0 rgba(20, 16, 40, .04), 0 14px 30px rgba(60, 40, 120, .08);
+}
+.app[data-theme="dark"][data-dir="bold"] {
+  --page: #070510; --bg: #0d0a17; --surface: #161122; --surface2: #1f1733;
+  --text: #f3f0fb; --dim: #a99fc6; --faint: #6d6489; --border: #241c3a;
+  --accent: #a78bfa; --accent2: #c4b5fd; --accentSoft: #241a3d;
+  --pos: #34d399; --neg: #f87171; --warn: #fbbf24;
+  --shadow: 0 2px 0 rgba(0, 0, 0, .3), 0 16px 34px rgba(0, 0, 0, .55);
+}
+
+@keyframes bt-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes bt-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes bt-pop { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
+
+@layer components {
+  /* Themeable status pills (replace hardcoded emerald/amber/red badges). */
+  .pill { display: inline-flex; align-items: center; gap: .25rem; border-radius: 999px; padding: 2px 10px; font-size: 11px; font-weight: 700; }
+  .pill-pos { background: color-mix(in srgb, var(--pos) 15%, transparent); color: var(--pos); }
+  .pill-warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+  .pill-neg { background: color-mix(in srgb, var(--neg) 15%, transparent); color: var(--neg); }
+  .pill-muted { background: var(--surface2); color: var(--dim); }
+  .pill-accent { background: var(--accentSoft); color: var(--accent2); }
+}
+
+@layer utilities {
+  /* tabular/numeric figures use the direction's number font */
+  .num { font-family: var(--font-num); }
+  /* hidden scrollbars for in-card scroll regions */
+  .scwrap { scrollbar-width: none; }
+  .scwrap::-webkit-scrollbar { display: none; }
+  .anim-fade { animation: bt-fade-in .25s ease; }
+  .anim-sheet { animation: bt-sheet-up .28s cubic-bezier(.2, .8, .2, 1); }
 }
 
 *,

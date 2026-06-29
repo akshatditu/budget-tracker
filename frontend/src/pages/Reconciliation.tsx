@@ -7,10 +7,10 @@ import { Card, Button, Field, Input, EmptyState } from "../components/ui";
 
 function DriftCell({ drift }: { drift: number }) {
   if (Math.abs(drift) < 0.005) {
-    return <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">Matched</span>;
+    return <span className="pill pill-pos">Matched</span>;
   }
   // Negative = real bank has less than computed (likely an unlogged expense).
-  const cls = drift < 0 ? "text-red-600" : "text-amber-600";
+  const cls = drift < 0 ? "text-neg" : "text-warn";
   return <span className={`font-semibold ${cls}`}>{drift > 0 ? "+" : ""}{money(drift)}</span>;
 }
 
@@ -34,8 +34,8 @@ export default function Reconciliation() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Reconciliation</h1>
+      <div className="hidden lg:block">
+        <h1 className="text-[26px] font-extrabold tracking-tight">Reconciliation</h1>
         <p className="text-sm text-muted">Record your real bank balance and compare it against the computed carry-forward, so drift (e.g. an unlogged expense) surfaces instead of quietly accruing.</p>
       </div>
 
@@ -79,7 +79,7 @@ export default function Reconciliation() {
                     <td className="py-2 text-right"><DriftCell drift={r.drift} /></td>
                     <td className="py-2 text-muted">{r.note || "—"}</td>
                     <td className="py-2 text-right">
-                      <button className="text-muted hover:text-red-600" title="Delete snapshot" onClick={() => remove.mutate(r.id)}><Trash2 size={15} /></button>
+                      <button className="text-muted hover:text-neg" title="Delete snapshot" onClick={() => remove.mutate(r.id)}><Trash2 size={15} /></button>
                     </td>
                   </tr>
                 ))}

@@ -10,15 +10,21 @@ const inr = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });
 
-const inrCompact = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
-
 export const money = (n: Numeric): string => inr.format(Math.round(Number(n) || 0));
-export const moneyCompact = (n: Numeric): string => inrCompact.format(Number(n) || 0);
+
+/** Compact Indian currency: ₹45.6K · ₹1.9L · ₹2.4Cr (the en-IN Intl compact
+ *  renders thousands as "T", which we don't want — so format by hand). */
+export const moneyCompact = (n: Numeric): string => {
+  const v = Number(n) || 0;
+  const abs = Math.abs(v);
+  const sign = v < 0 ? "-" : "";
+  const unit = (x: number, suffix: string) =>
+    `${sign}₹${(Math.round(x * 10) / 10).toFixed(1).replace(/\.0$/, "")}${suffix}`;
+  if (abs >= 1e7) return unit(abs / 1e7, "Cr");
+  if (abs >= 1e5) return unit(abs / 1e5, "L");
+  if (abs >= 1e3) return unit(abs / 1e3, "K");
+  return `${sign}₹${Math.round(abs)}`;
+};
 export const pct = (n: Numeric): string => `${Math.round((Number(n) || 0) * 100)}%`;
 
 /** Currency formatter for recharts tooltips (handles the array-value case). */

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Plus, Trash2, Wallet } from "lucide-react";
 import { useApp } from "../lib/AppContext";
 import { useIncomes, useIncomeMutations } from "../api/hooks";
-import { money, MONTH_NAMES, MONTH_SHORT } from "../lib/format";
+import { moneyCompact, MONTH_NAMES, MONTH_SHORT } from "../lib/format";
 import { Card, Button, Input, Select, Field, EmptyState } from "../components/ui";
 
 interface IncomeForm {
@@ -31,8 +31,8 @@ export default function Income() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">{year} Income</h1>
+      <div className="hidden lg:block">
+        <h1 className="text-[26px] font-extrabold tracking-tight">{year} Income</h1>
         <p className="text-sm text-muted">Add salary and any additional income any time — your monthly budget flexes around it.</p>
       </div>
 
@@ -55,10 +55,10 @@ export default function Income() {
             {MONTH_SHORT.map((m, i) => (
               <div key={m} className="flex justify-between">
                 <dt className="text-muted">{m}</dt>
-                <dd className={byMonth[i] ? "font-medium" : "text-muted"}>{money(byMonth[i])}</dd>
+                <dd className={byMonth[i] ? "font-medium" : "text-muted"}>{moneyCompact(byMonth[i])}</dd>
               </div>
             ))}
-            <div className="flex justify-between border-t border-line pt-2 font-semibold"><dt>Total</dt><dd>{money(total)}</dd></div>
+            <div className="flex justify-between border-t border-line pt-2 font-semibold"><dt>Total</dt><dd>{moneyCompact(total)}</dd></div>
           </dl>
         </Card>
 
@@ -81,8 +81,8 @@ export default function Income() {
                   <tr key={i.id} className="border-t border-line">
                     <td className="py-2 text-muted">{MONTH_NAMES[i.month - 1]}</td>
                     <td className="py-2 font-medium">{i.source}</td>
-                    <td className="py-2 text-right font-medium">{money(i.amount)}</td>
-                    <td className="py-2 text-right"><button className="text-muted hover:text-red-600" onClick={() => remove.mutate(i.id)}><Trash2 size={15} /></button></td>
+                    <td className="py-2 text-right font-medium">{moneyCompact(i.amount)}</td>
+                    <td className="py-2 text-right"><button className="text-muted hover:text-neg" onClick={() => remove.mutate(i.id)}><Trash2 size={15} /></button></td>
                   </tr>
                 ))}
               </tbody>

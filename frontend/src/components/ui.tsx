@@ -3,6 +3,7 @@ import {
   useRef,
   useState,
   type ButtonHTMLAttributes,
+  type CSSProperties,
   type InputHTMLAttributes,
   type ReactNode,
   type SelectHTMLAttributes,
@@ -19,14 +20,14 @@ interface CardProps {
 
 export function Card({ title, action, children, className = "" }: CardProps) {
   return (
-    <div className={`min-w-0 rounded-xl border border-line bg-surface shadow-sm ${className}`}>
+    <div className={`min-w-0 rounded-[var(--radius)] border border-line bg-surface shadow-[var(--shadow)] ${className}`}>
       {(title || action) && (
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
-          <h3 className="text-sm font-semibold text-ink">{title}</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-3.5">
+          <h3 className="text-[15px] font-extrabold tracking-tight text-ink">{title}</h3>
           {action}
         </div>
       )}
-      <div className="p-4">{children}</div>
+      <div className="p-5">{children}</div>
     </div>
   );
 }
@@ -39,19 +40,19 @@ interface KpiCardProps {
   icon?: LucideIcon;
 }
 
-export function KpiCard({ label, value, sub, accent = "var(--color-brand)", icon: Icon }: KpiCardProps) {
+export function KpiCard({ label, value, sub, accent = "var(--accent)", icon: Icon }: KpiCardProps) {
   return (
-    <div className="min-w-0 rounded-xl border border-line bg-surface p-4 shadow-sm">
+    <div className="min-w-0 rounded-[var(--radiusSm)] border border-line bg-surface p-4 shadow-[var(--shadow)]">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted">{label}</span>
+        <span className="text-[10.5px] font-bold uppercase tracking-[.05em] text-dim">{label}</span>
         {Icon && (
-          <span className="rounded-lg p-1.5" style={{ background: `${accent}1a`, color: accent }}>
-            <Icon size={16} />
+          <span className="grid h-7 w-7 place-items-center rounded-lg" style={{ background: `color-mix(in srgb, ${accent} 14%, transparent)`, color: accent }}>
+            <Icon size={15} />
           </span>
         )}
       </div>
-      <div className="mt-2 text-xl font-semibold text-ink sm:text-2xl">{value}</div>
-      {sub && <div className="mt-1 text-xs text-muted">{sub}</div>}
+      <div className="num mt-1.5 text-[23px] font-extrabold tracking-tight text-ink">{value}</div>
+      {sub && <div className="mt-1 text-xs font-medium text-dim">{sub}</div>}
     </div>
   );
 }
@@ -62,28 +63,29 @@ interface ProgressBarProps {
   color?: string;
 }
 
-export function ProgressBar({ value, max, color = "var(--color-brand)" }: ProgressBarProps) {
+export function ProgressBar({ value, max, color = "var(--accent)" }: ProgressBarProps) {
   const ratio = max > 0 ? Math.min(value / max, 1) : 0;
   const over = max > 0 && value > max;
   return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-canvas">
+    <div className="h-2 w-full overflow-hidden rounded-full bg-surface2">
       <div
         className="h-full rounded-full transition-all"
-        style={{ width: `${ratio * 100}%`, background: over ? "#ef4444" : color }}
+        style={{ width: `${ratio * 100}%`, background: over ? "var(--neg)" : color }}
       />
     </div>
   );
 }
 
-const STATUS_STYLE: Record<string, string> = {
-  OK: "bg-emerald-100 text-emerald-700",
-  Watch: "bg-amber-100 text-amber-700",
-  Over: "bg-red-100 text-red-700",
+const STATUS_STYLE: Record<string, { bg: string; fg: string }> = {
+  OK: { bg: "color-mix(in srgb, var(--pos) 15%, transparent)", fg: "var(--pos)" },
+  Watch: { bg: "color-mix(in srgb, var(--warn) 18%, transparent)", fg: "var(--warn)" },
+  Over: { bg: "color-mix(in srgb, var(--neg) 15%, transparent)", fg: "var(--neg)" },
 };
 
 export function StatusChip({ status }: { status: string }) {
+  const s = STATUS_STYLE[status] || { bg: "var(--surface2)", fg: "var(--dim)" };
   return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[status] || "bg-slate-100 text-slate-600"}`}>
+    <span className="rounded-full px-2.5 py-0.5 text-[11px] font-bold" style={{ background: s.bg, color: s.fg }}>
       {status}
     </span>
   );
@@ -95,16 +97,23 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
 }
 
-export function Button({ variant = "primary", className = "", ...props }: ButtonProps) {
+export function Button({ variant = "primary", className = "", style, ...props }: ButtonProps) {
   const styles: Record<ButtonVariant, string> = {
-    primary: "bg-brand text-white hover:opacity-90",
-    ghost: "text-muted hover:bg-canvas",
-    outline: "border border-line text-ink hover:bg-canvas",
-    danger: "text-red-600 hover:bg-red-50",
+    primary: "text-white hover:opacity-90",
+    ghost: "text-dim hover:bg-surface2",
+    outline: "border border-line text-ink hover:bg-surface2",
+    danger: "hover:bg-surface2",
+  };
+  const inline: Record<ButtonVariant, CSSProperties> = {
+    primary: { background: "var(--accent)" },
+    ghost: {},
+    outline: { background: "var(--surface)" },
+    danger: { color: "var(--neg)" },
   };
   return (
     <button
-      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition disabled:opacity-50 ${styles[variant]} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-[var(--radiusSm)] px-4 py-2 text-[13px] font-bold transition disabled:opacity-50 ${styles[variant]} ${className}`}
+      style={{ ...inline[variant], ...style }}
       {...props}
     />
   );
@@ -120,13 +129,44 @@ interface ModalProps {
 export function Modal({ open, onClose, title, children }: ModalProps) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-xl bg-surface shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-line px-4 py-3">
-          <h3 className="text-sm font-semibold">{title}</h3>
-          <button onClick={onClose} className="text-muted hover:text-ink"><X size={18} /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 anim-fade" onClick={onClose}>
+      <div className="w-full max-w-md rounded-[var(--radius)] border border-line bg-surface shadow-[var(--shadow)]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+          <h3 className="text-[15px] font-extrabold tracking-tight">{title}</h3>
+          <button onClick={onClose} className="grid h-[30px] w-[30px] place-items-center rounded-full bg-surface2 text-dim hover:text-ink"><X size={16} /></button>
         </div>
-        <div className="p-4">{children}</div>
+        <div className="p-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+interface SheetProps {
+  open: boolean;
+  onClose: () => void;
+  title?: ReactNode;
+  children: ReactNode;
+}
+
+/** Bottom sheet — slides up from the bottom on mobile, centers as a card on sm+.
+ *  Mirrors the BudgetIQ mobile design's item-detail / quick-add sheets. */
+export function Sheet({ open, onClose, title, children }: SheetProps) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end sm:items-center sm:justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/45 anim-fade" />
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="scwrap anim-sheet relative max-h-[88%] w-full overflow-y-auto rounded-t-[26px] border border-line bg-surface px-5 pb-8 pt-2 shadow-[var(--shadow)] sm:max-w-md sm:rounded-[var(--radius)] sm:pt-5"
+      >
+        <div className="mx-auto mb-4 h-1 w-9 rounded-full sm:hidden" style={{ background: "var(--border)" }} />
+        {title && (
+          <div className="mb-1 flex items-center justify-between">
+            <h3 className="text-[18px] font-extrabold tracking-tight">{title}</h3>
+            <button onClick={onClose} className="grid h-[30px] w-[30px] place-items-center rounded-full bg-surface2 text-dim hover:text-ink"><X size={16} /></button>
+          </div>
+        )}
+        {children}
       </div>
     </div>
   );
@@ -159,7 +199,7 @@ export function EditableNumber({ value, onCommit, className = "", align = "right
     return (
       <button
         onClick={() => setEditing(true)}
-        className={`w-full rounded px-2 py-1 text-${align} hover:bg-indigo-50 hover:ring-1 hover:ring-indigo-200 ${className}`}
+        className={`num w-full rounded px-2 py-1 text-${align} transition hover:bg-accentsoft ${className}`}
         title="Click to edit"
       >
         {money(value)}
@@ -177,7 +217,8 @@ export function EditableNumber({ value, onCommit, className = "", align = "right
         if (e.key === "Enter") commit();
         if (e.key === "Escape") { setEditing(false); setDraft(String(value ?? 0)); }
       }}
-      className={`w-full rounded border border-brand px-2 py-1 text-${align} outline-none`}
+      className={`num w-full rounded-[var(--radiusXs)] border px-2 py-1 text-${align} outline-none`}
+      style={{ borderColor: "var(--accent)", background: "var(--bg)", color: "var(--text)" }}
     />
   );
 }
@@ -185,7 +226,7 @@ export function EditableNumber({ value, onCommit, className = "", align = "right
 export function Field({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium text-muted">{label}</span>
+      <span className="mb-1.5 block text-[11.5px] font-bold text-dim">{label}</span>
       {children}
     </label>
   );
@@ -195,7 +236,8 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`w-full min-w-0 rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand ${props.className || ""}`}
+      className={`w-full min-w-0 rounded-[var(--radiusXs)] border border-line px-3.5 py-3 text-sm font-semibold text-ink outline-none transition focus:border-[var(--accent)] ${props.className || ""}`}
+      style={{ background: "var(--bg)", ...props.style }}
     />
   );
 }
@@ -204,7 +246,8 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
       {...props}
-      className={`w-full min-w-0 rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-brand ${props.className || ""}`}
+      className={`w-full min-w-0 rounded-[var(--radiusXs)] border border-line px-3.5 py-3 text-sm font-semibold text-ink outline-none transition focus:border-[var(--accent)] ${props.className || ""}`}
+      style={{ background: "var(--bg)", ...props.style }}
     />
   );
 }
@@ -218,10 +261,10 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon: Icon, title, hint, action }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-line bg-surface px-6 py-12 text-center">
-      {Icon && <Icon size={32} className="mb-3 text-muted" />}
-      <p className="text-sm font-medium text-ink">{title}</p>
-      {hint && <p className="mt-1 max-w-sm text-xs text-muted">{hint}</p>}
+    <div className="flex flex-col items-center justify-center rounded-[var(--radius)] border border-dashed border-line bg-surface px-6 py-12 text-center">
+      {Icon && <Icon size={32} className="mb-3 text-faint" />}
+      <p className="text-sm font-bold text-ink">{title}</p>
+      {hint && <p className="mt-1 max-w-sm text-xs font-medium text-dim">{hint}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );

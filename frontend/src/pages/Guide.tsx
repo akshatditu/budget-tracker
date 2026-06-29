@@ -95,15 +95,15 @@ function MonthRowSnapshot() {
                 <td className="py-1.5 text-right text-muted">{money(r.initial)}</td>
                 <td className="py-1.5 text-right">{money(r.revised)}</td>
                 <td className="py-1.5 text-right">{money(r.spent)}</td>
-                <td className={`py-1.5 text-right font-medium ${rem < 0 ? "text-red-600" : "text-emerald-600"}`}>{money(rem)}</td>
+                <td className={`py-1.5 text-right font-medium ${rem < 0 ? "text-neg" : "text-pos"}`}>{money(rem)}</td>
               </tr>
             );
           })}
         </tbody>
       </table>
       <p className="mt-3 text-xs text-muted">
-        Grocery has <span className="text-emerald-600">{money(2500)} left</span>; Swiggy is
-        <span className="text-red-600"> {money(-1200)} over</span> — you spent more than you planned.
+        Grocery has <span className="text-pos">{money(2500)} left</span>; Swiggy is
+        <span className="text-neg"> {money(-1200)} over</span> — you spent more than you planned.
       </p>
     </Snapshot>
   );
@@ -112,8 +112,8 @@ function MonthRowSnapshot() {
 function CarrySnapshot() {
   const rows: [string, number, string][] = [
     ["From last month", 12000, "text-ink"],
-    ["+ Income", 60000, "text-emerald-600"],
-    ["− Spent", 38000, "text-red-600"],
+    ["+ Income", 60000, "text-pos"],
+    ["− Spent", 38000, "text-neg"],
     ["Invested (kept)", 10000, "text-muted"],
   ];
   return (
@@ -127,7 +127,7 @@ function CarrySnapshot() {
         ))}
         <div className="flex justify-between border-t border-line pt-2">
           <dt className="text-muted">Net carry forward (in bank)</dt>
-          <dd className="font-semibold text-emerald-600">{money(34000)}</dd>
+          <dd className="font-semibold text-pos">{money(34000)}</dd>
         </div>
       </dl>
       <p className="mt-3 text-xs text-muted">
@@ -146,7 +146,7 @@ function GoalSnapshot() {
       <div className="flex items-center gap-2">
         <Target size={16} className="text-brand" />
         <span className="font-semibold">Goa trip</span>
-        <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Behind</span>
+        <span className="ml-auto pill pill-warn">Behind</span>
       </div>
       <div className="mt-3 flex items-end justify-between">
         <span className="text-2xl font-semibold">{money(saved)}</span>
@@ -183,7 +183,7 @@ function ReconcileSnapshot() {
             <td className="py-2 font-medium">2026-06-30</td>
             <td className="py-2 text-right">{money(34000)}</td>
             <td className="py-2 text-right text-muted">{money(35000)}</td>
-            <td className="py-2 text-right font-semibold text-red-600">−{money(1000)}</td>
+            <td className="py-2 text-right font-semibold text-neg">−{money(1000)}</td>
           </tr>
         </tbody>
       </table>
@@ -223,7 +223,7 @@ export default function Guide() {
   return (
     <div className="mx-auto max-w-4xl space-y-10 pb-12">
       {/* Hero */}
-      <header className="rounded-2xl border border-line bg-gradient-to-br from-blue-50 to-surface p-6 shadow-sm">
+      <header className="rounded-2xl border border-line bg-gradient-to-br from-accentsoft to-surface p-6 shadow-sm">
         <div className="flex items-center gap-2 text-brand">
           <BookOpen size={20} />
           <span className="text-xs font-semibold uppercase tracking-wide">Guide</span>
@@ -260,7 +260,7 @@ export default function Guide() {
             <ArrowRight size={16} className="text-muted" />
             <span className="rounded-lg bg-canvas px-3 py-1.5 font-medium">This month: plan {money(8000)}, spent {money(6500)}</span>
             <ArrowRight size={16} className="text-muted" />
-            <span className="rounded-lg bg-emerald-50 px-3 py-1.5 font-medium text-emerald-700">{money(1500)} left</span>
+            <span className="rounded-lg bg-surface2 px-3 py-1.5 font-medium text-pos">{money(1500)} left</span>
           </div>
         </div>
       </Section>
@@ -286,7 +286,7 @@ export default function Guide() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {STEPS.map((s, i) => (
             <div key={s.title} className="flex gap-3 rounded-xl border border-line bg-surface p-4 shadow-sm">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-semibold text-brand">{i + 1}</div>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accentsoft text-sm font-semibold text-accent2">{i + 1}</div>
               <div>
                 <div className="flex items-center gap-1.5 text-sm font-semibold text-ink">
                   <s.icon size={15} className="text-brand" />{s.title}
@@ -332,10 +332,10 @@ export default function Guide() {
       {/* Worked example */}
       <Section id="example" kicker="See it in action" title="A month, start to finish">
         <ol className="space-y-3 text-sm text-muted">
-          <li className="flex gap-2"><CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-600" /><span><strong className="text-ink">Plan:</strong> In Budget Setup you give Grocery {money(96000)} for the year ⇒ {money(8000)}/month.</span></li>
-          <li className="flex gap-2"><CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-600" /><span><strong className="text-ink">Adjust:</strong> A wedding's coming, so on the Month screen you raise Grocery's <em>Revised</em> to {money(9000)} for this month.</span></li>
-          <li className="flex gap-2"><CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-600" /><span><strong className="text-ink">Log:</strong> You add grocery bills as you shop. They total {money(6500)}.</span></li>
-          <li className="flex gap-2"><CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-600" /><span><strong className="text-ink">Read:</strong> The app shows {money(2500)} remaining on Grocery, and an over-budget warning on Swiggy.</span></li>
+          <li className="flex gap-2"><CheckCircle2 size={16} className="mt-0.5 shrink-0 text-pos" /><span><strong className="text-ink">Plan:</strong> In Budget Setup you give Grocery {money(96000)} for the year ⇒ {money(8000)}/month.</span></li>
+          <li className="flex gap-2"><CheckCircle2 size={16} className="mt-0.5 shrink-0 text-pos" /><span><strong className="text-ink">Adjust:</strong> A wedding's coming, so on the Month screen you raise Grocery's <em>Revised</em> to {money(9000)} for this month.</span></li>
+          <li className="flex gap-2"><CheckCircle2 size={16} className="mt-0.5 shrink-0 text-pos" /><span><strong className="text-ink">Log:</strong> You add grocery bills as you shop. They total {money(6500)}.</span></li>
+          <li className="flex gap-2"><CheckCircle2 size={16} className="mt-0.5 shrink-0 text-pos" /><span><strong className="text-ink">Read:</strong> The app shows {money(2500)} remaining on Grocery, and an over-budget warning on Swiggy.</span></li>
         </ol>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <MonthRowSnapshot />
@@ -371,7 +371,7 @@ export default function Guide() {
           The app only knows what you tell it. If you forget a transaction, its numbers slowly drift from
           your real bank. Reconciling catches that: enter your actual balance for a date, and the app shows
           the difference. {" "}
-          <span className="inline-flex items-center gap-1 font-medium text-emerald-700"><Gauge size={14} /> "Matched"</span> {" "}
+          <span className="inline-flex items-center gap-1 font-medium text-pos"><Gauge size={14} /> "Matched"</span> {" "}
           means you're spot on; a red drift means go find the missing entry.
         </p>
         <ReconcileSnapshot />
@@ -389,7 +389,7 @@ export default function Guide() {
             "Investments aren't 'spending' — they're wealth you keep. Don't worry when they're left out of spend totals.",
           ].map((t) => (
             <div key={t} className="flex gap-2 rounded-xl border border-line bg-surface p-4 text-sm text-muted shadow-sm">
-              <Lightbulb size={16} className="mt-0.5 shrink-0 text-amber-500" />
+              <Lightbulb size={16} className="mt-0.5 shrink-0 text-warn" />
               <span>{t}</span>
             </div>
           ))}

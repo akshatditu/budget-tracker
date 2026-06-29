@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { AppProvider } from "./lib/AppContext";
+import { ThemeProvider } from "./lib/theme";
 import { useAuth, useAuthExpiryListener } from "./lib/auth";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
@@ -41,9 +42,10 @@ export default function App() {
   if (!user.onboarded) return <Onboarding />;
 
   return (
-    <AppProvider>
-      <Layout>
-        <Routes>
+    <ThemeProvider>
+      <AppProvider>
+        <Layout>
+          <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/month" element={<MonthView />} />
           <Route path="/rollup" element={<AnnualRollup />} />
@@ -54,8 +56,9 @@ export default function App() {
           <Route path="/reconcile" element={<Reconciliation />} />
           <Route path="/guide" element={<Guide />} />
           <Route path="/settings" element={<Settings />} />
-        </Routes>
-      </Layout>
-    </AppProvider>
+          </Routes>
+        </Layout>
+      </AppProvider>
+    </ThemeProvider>
   );
 }

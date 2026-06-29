@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ChevronRight } from "lucide-react";
 import { useApp } from "../lib/AppContext";
 import { useAnnualBudget, useCategories, useSubcategories, useIncomes, useRegenerateBudget } from "../api/hooks";
 import { sectionColor } from "../lib/format";
@@ -10,7 +10,7 @@ const BILLS = "Bills";
 
 /** "Build my budget with AI" — opens the wizard pre-filled with the user's current catalog
  *  so they can re-run the AI allocator on the selected year. Used on Dashboard + Budget Setup. */
-export default function RegenerateBudget({ className = "" }: { className?: string }) {
+export default function RegenerateBudget({ className = "", banner = false }: { className?: string; banner?: boolean }) {
   const { year } = useApp();
   const [open, setOpen] = useState(false);
   const { data: categories = [] } = useCategories();
@@ -52,9 +52,26 @@ export default function RegenerateBudget({ className = "" }: { className?: strin
 
   return (
     <>
-      <Button variant="outline" className={className} onClick={() => setOpen(true)}>
-        <Sparkles size={16} /> Build with AI
-      </Button>
+      {banner ? (
+        <button
+          onClick={() => setOpen(true)}
+          className={`flex w-full items-center gap-3.5 rounded-[var(--radius)] p-[17px] text-left text-white ${className}`}
+          style={{ background: "linear-gradient(135deg, var(--accent), var(--accent2))", boxShadow: "0 10px 26px color-mix(in srgb, var(--accent) 35%, transparent)" }}
+        >
+          <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[13px] bg-white/20">
+            <Sparkles size={20} />
+          </span>
+          <span className="flex-1">
+            <span className="block text-[15.5px] font-extrabold tracking-tight">Build with AI</span>
+            <span className="mt-0.5 block text-xs font-semibold opacity-90">Answer a few questions — we'll draft your whole budget.</span>
+          </span>
+          <ChevronRight size={18} className="opacity-90" />
+        </button>
+      ) : (
+        <Button variant="outline" className={className} onClick={() => setOpen(true)}>
+          <Sparkles size={16} /> Build with AI
+        </Button>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40">

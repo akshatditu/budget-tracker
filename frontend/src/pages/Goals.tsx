@@ -1,7 +1,7 @@
 ﻿import { useState, type FormEvent } from "react";
 import { Plus, Trash2, Target, PiggyBank, Link2, AlertTriangle } from "lucide-react";
 import { useGoals, useGoalMutations, useGoalContributions, useCategories, useSubcategories, useSubcatUnspent } from "../api/hooks";
-import { money, pct } from "../lib/format";
+import { money, moneyCompact, pct } from "../lib/format";
 import {
   Card, Button, Modal, Field, Input, Select, ProgressBar, EmptyState,
 } from "../components/ui";
@@ -11,15 +11,15 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 function OnTrackChip({ goal }: { goal: Goal }) {
   if (goal.saved >= goal.target_amount && goal.target_amount > 0) {
-    return <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">Funded</span>;
+    return <span className="pill pill-pos">Funded</span>;
   }
   if (goal.on_track === null) {
-    return <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">No date</span>;
+    return <span className="pill pill-muted">No date</span>;
   }
   return goal.on_track ? (
-    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">On track</span>
+    <span className="pill pill-pos">On track</span>
   ) : (
-    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Behind</span>
+    <span className="pill pill-warn">Behind</span>
   );
 }
 
@@ -63,11 +63,11 @@ function ManageLinksModal({ goal, onClose }: { goal: Goal; onClose: () => void }
               <div className="flex-1">
                 <p className="text-sm font-medium">{link.subcategory_name ?? "—"}</p>
               </div>
-              <span className="rounded-md bg-slate-100 px-2 py-0.5 text-sm text-muted">
+              <span className="rounded-md bg-surface2 px-2 py-0.5 text-sm text-muted">
                 {link.auto_weight.toFixed(1)}%
               </span>
               <button
-                className="text-muted hover:text-red-600"
+                className="text-muted hover:text-neg"
                 onClick={() => removeLink.mutate({ goalId: goal.id, linkId: link.id })}
               >
                 <Trash2 size={15} />
@@ -108,7 +108,7 @@ function ManageLinksModal({ goal, onClose }: { goal: Goal; onClose: () => void }
         {newSubcatId && subcatPool && (
           <div className="mt-2 text-xs">
             {insufficientPool ? (
-              <div className="flex items-center gap-1.5 rounded bg-amber-50 px-2 py-1.5 text-amber-700">
+              <div className="flex items-center gap-1.5 rounded bg-surface2 px-2 py-1.5 text-warn">
                 <AlertTriangle size={12} className="shrink-0" />
                 Only {money(subcatPool.available)} available (unspent {money(subcatPool.unspent)} − claimed by other goals {money(subcatPool.claimed)}).
                 Increase the subcategory budget by at least {money(goal.target_amount - subcatPool.available)} to link.
@@ -161,7 +161,7 @@ function ContributionsModal({ goal, onClose }: { goal: Goal; onClose: () => void
               <div className="font-medium">{money(c.amount)}</div>
               <div className="text-xs text-muted">{c.contrib_date}{c.note ? ` · ${c.note}` : ""}</div>
             </div>
-            <button className="text-muted hover:text-red-600" onClick={() => removeContribution.mutate({ goalId: goal.id, id: c.id })}>
+            <button className="text-muted hover:text-neg" onClick={() => removeContribution.mutate({ goalId: goal.id, id: c.id })}>
               <Trash2 size={16} />
             </button>
           </div>
@@ -184,7 +184,7 @@ function GoalCard({ goal }: { goal: Goal }) {
       action={
         <div className="flex items-center gap-2">
           <OnTrackChip goal={goal} />
-          <button className="text-muted hover:text-red-600" onClick={() => remove.mutate(goal.id)} title="Delete goal">
+          <button className="text-muted hover:text-neg" onClick={() => remove.mutate(goal.id)} title="Delete goal">
             <Trash2 size={15} />
           </button>
         </div>
@@ -192,20 +192,20 @@ function GoalCard({ goal }: { goal: Goal }) {
     >
       <div className="space-y-3">
         <div className="flex items-end justify-between">
-          <span className="text-2xl font-semibold">{money(goal.saved)}</span>
-          <span className="text-sm text-muted">of {money(goal.target_amount)}</span>
+          <span className="text-2xl font-semibold">{moneyCompact(goal.saved)}</span>
+          <span className="text-sm text-muted">of {moneyCompact(goal.target_amount)}</span>
         </div>
         <ProgressBar value={goal.saved} max={goal.target_amount} color="var(--color-investments)" />
         <dl className="space-y-1.5 text-sm">
           <div className="flex justify-between"><dt className="text-muted">Progress</dt><dd className="font-medium">{pct(goal.pct)}</dd></div>
-          <div className="flex justify-between"><dt className="text-muted">Remaining</dt><dd className="font-medium">{money(goal.remaining)}</dd></div>
+          <div className="flex justify-between"><dt className="text-muted">Remaining</dt><dd className="font-medium">{moneyCompact(goal.remaining)}</dd></div>
           {goal.target_date && (
             <div className="flex justify-between"><dt className="text-muted">Target date</dt><dd className="font-medium">{goal.target_date}</dd></div>
           )}
           {goal.monthly_required !== null && (
             <div className="flex justify-between">
               <dt className="text-muted">Need / month</dt>
-              <dd className="font-semibold text-brand">{money(goal.monthly_required)}</dd>
+              <dd className="font-semibold text-brand">{moneyCompact(goal.monthly_required)}</dd>
             </div>
           )}
         </dl>
@@ -274,7 +274,7 @@ export default function Goals() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Goals & Sinking Funds</h1>
+        <h1 className="hidden text-[26px] font-extrabold tracking-tight lg:block">Goals & Sinking Funds</h1>
         <Button onClick={() => setAdding(true)}><Plus size={16} /> Add goal</Button>
       </div>
 
