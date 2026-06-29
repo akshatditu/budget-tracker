@@ -12,9 +12,16 @@ const inr = new Intl.NumberFormat("en-IN", {
 
 export const money = (n: Numeric): string => inr.format(Math.round(Number(n) || 0));
 
-/** Compact Indian currency: ₹45.6K · ₹1.9L · ₹2.4Cr (the en-IN Intl compact
- *  renders thousands as "T", which we don't want — so format by hand). */
+/** Web (lg+, matching the desktop table layout) has room for full numbers; only
+ *  mobile needs the compact form. SSR-safe default to wide. */
+const isWide = (): boolean =>
+  typeof window === "undefined" || window.innerWidth >= 1024;
+
+/** Compact Indian currency on mobile (₹45.6K · ₹1.9L · ₹2.4Cr), full on web.
+ *  The en-IN Intl compact renders thousands as "T", which we don't want — so
+ *  format by hand. */
 export const moneyCompact = (n: Numeric): string => {
+  if (isWide()) return money(n);
   const v = Number(n) || 0;
   const abs = Math.abs(v);
   const sign = v < 0 ? "-" : "";
