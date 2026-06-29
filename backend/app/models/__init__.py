@@ -14,6 +14,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
     UniqueConstraint,
     func,
 )
@@ -234,3 +235,42 @@ class BalanceSnapshot(Base):
     actual_balance: Mapped[float] = mapped_column(MONEY)
     note: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BudgetRevisionDraft(Base):
+    """A pending (or accepted) AI budget revision for a year. The AI reads the user's
+    actual spending and proposes new revised amounts per sub-item; nothing touches the
+    live budget until the user accepts. Only one row with status="pending" may exist per
+    (user, year) — enforced in the router. Accepted rows are retained as revision history."""
+
+    __tablename__ = "budget_revision_drafts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    budget_year_id: Mapped[int] = mapped_column(ForeignKey("budget_years.id", ondelete="CASCADE"), index=True)
+    status: Mapped[str] = mapped_column(String(20), default="pending", server_default="pending")
+    user_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # JSON-encoded list[str] of AI insights — advisory prose, not a money value.
+    insights: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    items: Mapped[list[BudgetRevisionItem]] = relationship(
+        back_populates="draft", cascade="all, delete-orphan"
+    )
+
+
+class BudgetRevisionItem(Base):
+    """One sub-item's proposed change within a draft: current annual revised budget vs the
+    AI's revised annual figure, with the AI's reason. Amounts stay encrypted at rest."""
+
+    __tablename__ = "budget_revision_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    draft_id: Mapped[int] = mapped_column(ForeignKey("budget_revision_drafts.id", ondelete="CASCADE"), index=True)
+    subcategory_id: Mapped[int] = mapped_column(ForeignKey("subcategories.id", ondelete="CASCADE"), index=True)
+    current_annual: Mapped[float] = mapped_column(MONEY, default=0)
+    revised_annual: Mapped[float] = mapped_column(MONEY, default=0)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    draft: Mapped[BudgetRevisionDraft] = relationship(back_populates="items")

@@ -123,6 +123,7 @@
 }
 
 @keyframes bt-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes bt-drawer-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
 @keyframes bt-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes bt-pop { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
 
@@ -151,6 +152,7 @@
   .scwrap::-webkit-scrollbar { display: none; }
   .anim-fade { animation: bt-fade-in .25s ease; }
   .anim-sheet { animation: bt-sheet-up .28s cubic-bezier(.2, .8, .2, 1); }
+  .anim-drawer { animation: bt-drawer-in .28s cubic-bezier(.2, .8, .2, 1); }
 }
 
 /* Semantic headings inside the app adopt the Bricolage Grotesque display font. */

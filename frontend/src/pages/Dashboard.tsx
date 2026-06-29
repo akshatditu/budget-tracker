@@ -5,6 +5,7 @@ import { useDashboard } from "../api/hooks";
 import { money, moneyCompact, pct, sectionColor } from "../lib/format";
 import { StatusChip } from "../components/ui";
 import RegenerateBudget from "../components/RegenerateBudget";
+import ReviseBudget from "../components/ReviseBudget";
 
 const card = "rounded-[var(--radius)] border border-line bg-surface p-[18px] shadow-[var(--shadow)]";
 
@@ -39,7 +40,8 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      <RegenerateBudget banner />
+      {/* Once a budget exists, offer to revise it; first-run users still get "Build with AI". */}
+      {plan > 0 ? <ReviseBudget banner /> : <RegenerateBudget banner />}
 
       {/* Hero — left to spend this year */}
       <div className={card}>

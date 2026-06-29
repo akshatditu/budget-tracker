@@ -2,7 +2,7 @@
 frontend contract (stored as Numeric server-side)."""
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -45,6 +45,33 @@ class GenerateBudgetPayload(OnboardingPayload):
     #   "replace" — overwrite Initial + Revised for all 12 months
     #   "forward" — update Initial; reset Revised only for the current + future months
     override_mode: str = "forward"
+
+
+# ---- AI budget revision ----
+class RevisionGeneratePayload(BaseModel):
+    # Free-text "what's changed since the last budget" — optional; empty means nothing changed.
+    user_note: Optional[str] = None
+
+
+class RevisionItemOut(BaseModel):
+    subcategory_id: int
+    name: str
+    section: str
+    kind: str
+    current_annual: float
+    revised_annual: float
+    delta: float  # revised_annual - current_annual
+    reason: Optional[str] = None
+
+
+class BudgetRevisionDraftOut(BaseModel):
+    id: int
+    year: int
+    status: str
+    user_note: Optional[str] = None
+    created_at: datetime
+    items: list[RevisionItemOut] = []
+    insights: list[str] = []
 
 
 class UserUpdate(BaseModel):

@@ -7,6 +7,7 @@ import {
 import { money, moneyCompact, sectionColor } from "../lib/format";
 import { Card, EditableNumber, Button, Input, Modal, Field, Sheet } from "../components/ui";
 import RegenerateBudget from "../components/RegenerateBudget";
+import ReviseBudget from "../components/ReviseBudget";
 import type { AnnualBudgetRow, Category, Subcategory } from "../types/api";
 
 const ROLLOVER_HINT = "Unspent budget carries into next month instead of resetting.";
@@ -157,6 +158,9 @@ export default function BudgetSetup() {
   const [addSheetCat, setAddSheetCat] = useState<Category | null>(null); // mobile add sheet
   const [detail, setDetail] = useState<{ catName: string; itemId: number } | null>(null); // mobile detail sheet
 
+  // Once any budget amount exists, offer to revise it; first-run users still get "Build with AI".
+  const hasBudget = budget.some((b) => b.initial_annual > 0 || b.revised_annual > 0);
+
   const budgetBySub: Record<number, AnnualBudgetRow> = Object.fromEntries(
     budget.map((b): [number, AnnualBudgetRow] => [b.subcategory_id, b])
   );
@@ -185,14 +189,14 @@ export default function BudgetSetup() {
           <p className="text-sm text-muted">Set each item's yearly budget — it auto-splits evenly across 12 months. Revise individual months in the Month view.</p>
         </div>
         <div className="flex items-center gap-2 self-start">
-          <RegenerateBudget />
+          {hasBudget ? <ReviseBudget /> : <RegenerateBudget />}
           <Button variant="outline" onClick={() => setCatModal(true)}><FolderPlus size={16} /> Add section</Button>
         </div>
       </div>
 
       {/* Mobile: Build with AI banner + intro */}
       <div className="space-y-3.5 lg:hidden">
-        <RegenerateBudget banner />
+        {hasBudget ? <ReviseBudget banner /> : <RegenerateBudget banner />}
         <div className="rounded-[var(--radiusSm)] border border-line bg-surface px-[15px] py-[13px] text-[12.5px] font-semibold leading-snug text-dim">
           Set each item's yearly budget — it auto-splits across 12 months. Tap a month in Month view to revise just that one.
         </div>

@@ -179,20 +179,23 @@ interface EditableNumberProps {
   align?: "left" | "right" | "center";
 }
 
+/** Round to 2 decimals so editing doesn't surface float noise (e.g. 35312.98000000001). */
+const toDraft = (v: Numeric) => String(Math.round((Number(v) || 0) * 100) / 100);
+
 /** Inline-editable currency cell. Commits on blur / Enter. */
 export function EditableNumber({ value, onCommit, className = "", align = "right" }: EditableNumberProps) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(String(value ?? 0));
+  const [draft, setDraft] = useState(toDraft(value));
   const ref = useRef<HTMLInputElement>(null);
 
-  useEffect(() => setDraft(String(value ?? 0)), [value]);
+  useEffect(() => setDraft(toDraft(value)), [value]);
   useEffect(() => { if (editing) ref.current?.select(); }, [editing]);
 
   const commit = () => {
     setEditing(false);
     const n = Number(draft);
     if (!Number.isNaN(n) && n !== Number(value)) onCommit(n);
-    else setDraft(String(value ?? 0));
+    else setDraft(toDraft(value));
   };
 
   if (!editing) {
@@ -215,7 +218,7 @@ export function EditableNumber({ value, onCommit, className = "", align = "right
       onBlur={commit}
       onKeyDown={(e) => {
         if (e.key === "Enter") commit();
-        if (e.key === "Escape") { setEditing(false); setDraft(String(value ?? 0)); }
+        if (e.key === "Escape") { setEditing(false); setDraft(toDraft(value)); }
       }}
       className={`num w-full rounded-[var(--radiusXs)] border px-2 py-1 text-${align} outline-none`}
       style={{ borderColor: "var(--accent)", background: "var(--bg)", color: "var(--text)" }}

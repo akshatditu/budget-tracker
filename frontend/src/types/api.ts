@@ -40,6 +40,34 @@ export interface GenerateBudgetPayload extends OnboardingPayload {
   override_mode: "replace" | "forward";
 }
 
+// ---- AI budget revision ----
+export interface RevisionGeneratePayload {
+  /** Free-text "what's changed"; empty/omitted means nothing changed. */
+  user_note?: string;
+}
+
+export interface RevisionItem {
+  subcategory_id: number;
+  name: string;
+  section: string;
+  kind: CategoryKind;
+  current_annual: number;
+  revised_annual: number;
+  /** revised_annual - current_annual (positive = increased). */
+  delta: number;
+  reason: string | null;
+}
+
+export interface BudgetRevisionDraft {
+  id: number;
+  year: number;
+  status: "pending" | "accepted";
+  user_note: string | null;
+  created_at: string;
+  items: RevisionItem[];
+  insights: string[];
+}
+
 export interface UserUpdate {
   display_name?: string;
   currency?: string;

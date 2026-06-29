@@ -8,6 +8,7 @@ import type {
   AnnualRevisedResult,
   BalanceSnapshot,
   BalanceSnapshotCreate,
+  BudgetRevisionDraft,
   Category,
   CategoryCreate,
   CategoryUpdate,
@@ -28,6 +29,7 @@ import type {
   MonthlySettingResult,
   MonthView,
   OnboardingPayload,
+  RevisionGeneratePayload,
   Rollup,
   Subcategory,
   SubcategoryCreate,
@@ -138,6 +140,43 @@ export const useRegenerateBudget = (year: number) => {
       invalidateAll(qc, year); // categories, subcategories, year, month/rollup/dashboard
       ["annual-budget", "incomes"].forEach((k) => qc.invalidateQueries({ queryKey: [k, year] }));
     },
+  });
+};
+
+// ---- AI budget revision (existing users, behaviour-driven) ----
+export const useBudgetRevisionDraft = (year: number) =>
+  useQuery({
+    queryKey: ["budget-revision", year],
+    queryFn: () => get<BudgetRevisionDraft | null>(`/years/${year}/budget-revision`),
+    enabled: !!year,
+  });
+
+export const useGenerateRevision = (year: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: RevisionGeneratePayload) =>
+      api.post<BudgetRevisionDraft>(`/years/${year}/budget-revision`, body).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["budget-revision", year] }),
+  });
+};
+
+export const useAcceptRevision = (year: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api.post<BudgetRevisionDraft>(`/years/${year}/budget-revision/accept`).then((r) => r.data),
+    onSuccess: () => {
+      invalidateAll(qc, year); // categories, subcategories, year, month/rollup/dashboard
+      ["annual-budget", "budget-revision"].forEach((k) => qc.invalidateQueries({ queryKey: [k, year] }));
+    },
+  });
+};
+
+export const useDiscardRevision = (year: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete<void>(`/years/${year}/budget-revision`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["budget-revision", year] }),
   });
 };
 
