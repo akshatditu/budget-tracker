@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=DM+Sans:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap");
 @import "tailwindcss";
 
 /* Class-based dark mode, scoped to any subtree carrying `.dark`.
@@ -28,6 +28,36 @@
   --color-pos: #0f9d8f;
   --color-neg: #e0524b;
   --color-warn: #df8c2f;
+  --color-violet: #7c3aed;
+  --color-violetsoft: #ece6fe;
+  --color-info: #7c3aed;
+  --color-onaccent: #ffffff;
+
+  /* BudgetIQ display font (Bricolage Grotesque) — body/number fonts are
+     remapped per-theme inside `.app` via --font-ui / --font-num. */
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+
+  /* BudgetIQ type scale (display · h1 · h2 · h3 · label). */
+  --text-display: 36px;
+  --text-display--line-height: 1.05;
+  --text-display--font-weight: 800;
+  --text-display--letter-spacing: -0.03em;
+  --text-h1: 28px;
+  --text-h1--line-height: 1.1;
+  --text-h1--font-weight: 800;
+  --text-h1--letter-spacing: -0.025em;
+  --text-h2: 22px;
+  --text-h2--line-height: 1.15;
+  --text-h2--font-weight: 700;
+  --text-h2--letter-spacing: -0.02em;
+  --text-h3: 18px;
+  --text-h3--line-height: 1.2;
+  --text-h3--font-weight: 700;
+  --text-h3--letter-spacing: -0.015em;
+  --text-label: 11px;
+  --text-label--line-height: 1;
+  --text-label--font-weight: 700;
+  --text-label--letter-spacing: 0.1em;
 }
 
 /* ──────────────────────────────────────────────────────────────────────
@@ -43,10 +73,13 @@
   --page: #dfe2e8; --bg: #f4f5f7; --surface: #ffffff; --surface2: #f5f6f8;
   --text: #191c22; --dim: #5c6573; --faint: #99a1af; --border: #edeef2;
   --accent: #0f9d8f; --accent2: #0b7d72; --accentSoft: #dcf4ef;
+  --violet: #7c3aed; --violetLt: #a78bfa; --violetSoft: #ece6fe;
+  --onAccent: #ffffff; --info: #7c3aed;
   --pos: #0f9d8f; --neg: #e0524b; --warn: #df8c2f;
   --radius: 20px; --radiusSm: 14px; --radiusXs: 11px;
-  --font-ui: "Plus Jakarta Sans", system-ui, sans-serif;
-  --font-num: "Plus Jakarta Sans", sans-serif;
+  --font-ui: "DM Sans", system-ui, sans-serif;
+  --font-num: "Space Mono", ui-monospace, monospace;
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
   --shadow: 0 1px 2px rgba(20, 28, 46, .05), 0 12px 30px rgba(20, 28, 46, .05);
 
   /* remap semantic + new tokens onto the live theme vars (all variants) */
@@ -54,6 +87,8 @@
   --color-surface: var(--surface); --color-canvas: var(--bg); --color-brand: var(--accent);
   --color-surface2: var(--surface2); --color-dim: var(--dim); --color-faint: var(--faint);
   --color-accent: var(--accent); --color-accent2: var(--accent2); --color-accentsoft: var(--accentSoft);
+  --color-violet: var(--violet); --color-violetsoft: var(--violetSoft);
+  --color-info: var(--info); --color-onaccent: var(--onAccent);
   --color-pos: var(--pos); --color-neg: var(--neg); --color-warn: var(--warn);
 
   font-family: var(--font-ui);
@@ -64,6 +99,8 @@
   --page: #050608; --bg: #0f1217; --surface: #181c23; --surface2: #202530;
   --text: #eef1f6; --dim: #9aa3b2; --faint: #646d7c; --border: #262c37;
   --accent: #2dd4bf; --accent2: #5eead4; --accentSoft: #11302c;
+  --violet: #a78bfa; --violetLt: #c4b5fd; --violetSoft: #241a3d;
+  --onAccent: #0f1217; --info: #a78bfa;
   --pos: #34d399; --neg: #f87171; --warn: #fbbf24;
   --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 14px 34px rgba(0, 0, 0, .4);
 }
@@ -97,17 +134,27 @@
   .pill-neg { background: color-mix(in srgb, var(--neg) 15%, transparent); color: var(--neg); }
   .pill-muted { background: var(--surface2); color: var(--dim); }
   .pill-accent { background: var(--accentSoft); color: var(--accent2); }
+  .pill-violet { background: var(--violetSoft); color: var(--violet); }
 }
 
 @layer utilities {
   /* tabular/numeric figures use the direction's number font */
   .num { font-family: var(--font-num); }
+  /* Bricolage Grotesque display font for headings/wordmarks */
+  .font-display { font-family: var(--font-display); }
+  /* BudgetIQ brand gradients (teal → violet) */
+  .bg-brand-gradient { background-image: linear-gradient(135deg, #0f9d8f, #7c3aed); }
+  .bg-brand-gradient-lt { background-image: linear-gradient(135deg, #0dd9c8, #a78bfa); }
+  .bg-brand-gradient-dk { background-image: linear-gradient(135deg, #0f1217, #1a1230); }
   /* hidden scrollbars for in-card scroll regions */
   .scwrap { scrollbar-width: none; }
   .scwrap::-webkit-scrollbar { display: none; }
   .anim-fade { animation: bt-fade-in .25s ease; }
   .anim-sheet { animation: bt-sheet-up .28s cubic-bezier(.2, .8, .2, 1); }
 }
+
+/* Semantic headings inside the app adopt the Bricolage Grotesque display font. */
+.app :is(h1, h2, h3, h4) { font-family: var(--font-display); }
 
 *,
 *::before,

@@ -12,6 +12,7 @@ import { useAuth, logout } from "../lib/auth";
 import { useYears, useCreateYear } from "../api/hooks";
 import { MONTH_NAMES, MONTH_SHORT } from "../lib/format";
 import { startTour, tourSeenKey } from "../lib/tour";
+import { BudgetIQIcon } from "./Logo";
 
 interface NavItem {
   to: string;
@@ -34,18 +35,19 @@ const NAV: NavItem[] = [
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ];
 
-/** Gradient badge + "Budget IQ" wordmark, matching the redesign. */
+/** BudgetIQ mark + gradient wordmark, matching the brand design. */
 function BrandMark() {
   return (
     <div className="flex items-center gap-2.5">
-      <div
-        className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[18px] font-extrabold text-white"
-        style={{ background: "linear-gradient(135deg, var(--accent), var(--accent2))" }}
+      <BudgetIQIcon size={36} className="shrink-0" />
+      <span
+        className="text-[19px] font-extrabold tracking-tight"
+        style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}
       >
-        B
-      </div>
-      <span className="text-[19px] font-extrabold tracking-tight">
-        Budget<span style={{ color: "var(--accent)" }}>IQ</span>
+        Budget
+        <span className="bg-gradient-to-br from-[#0f9d8f] to-[#7c3aed] bg-clip-text text-transparent">
+          IQ
+        </span>
       </span>
     </div>
   );
@@ -87,19 +89,19 @@ function YearMonthBar({ mobile = false }: { mobile?: boolean }) {
   };
 
   const pill = "flex shrink-0 items-center rounded-full border border-line bg-surface2";
-  const arrow = "px-2.5 py-1.5 text-dim transition hover:text-ink";
+  const arrow = "px-2 py-1.5 text-dim transition hover:text-ink";
 
   const yearPill = (
     <div className={pill}>
       <button className={arrow} onClick={() => ensureYear(year - 1)}><ChevronLeft size={15} /></button>
-      <span className="num min-w-10 text-center text-sm font-bold">{year}</span>
+      <span className="num min-w-9 text-center text-sm font-bold">{year}</span>
       <button className={arrow} onClick={() => ensureYear(year + 1)}><ChevronRight size={15} /></button>
     </div>
   );
   const monthPill = showMonth && (
     <div className={pill}>
       <button className={arrow} onClick={() => setMonth(month === 1 ? 12 : month - 1)}><ChevronLeft size={15} /></button>
-      <span className="min-w-14 text-center text-sm font-bold">{mobile ? MONTH_SHORT[month - 1] : MONTH_NAMES[month - 1]}</span>
+      <span className="min-w-12 text-center text-sm font-bold">{mobile ? MONTH_SHORT[month - 1] : MONTH_NAMES[month - 1]}</span>
       <button className={arrow} onClick={() => setMonth(month === 12 ? 1 : month + 1)}><ChevronRight size={15} /></button>
     </div>
   );
@@ -131,10 +133,13 @@ function MobileHeading() {
   const title = pathname.startsWith("/month") ? MONTH_NAMES[month - 1] : SCREEN_TITLES[pathname] ?? "Overview";
   return (
     <div className="min-w-0">
-      <div className="text-[11px] font-extrabold uppercase tracking-[.14em]" style={{ color: "var(--accent)" }}>
-        Budget<span style={{ color: "var(--accent2)" }}>IQ</span>
+      <div className="truncate text-[11px] font-bold leading-none tracking-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+        Budget
+        <span className="bg-gradient-to-br from-[#0f9d8f] to-[#7c3aed] bg-clip-text font-extrabold text-transparent">
+          IQ
+        </span>
       </div>
-      <h1 className="truncate text-[23px] font-extrabold leading-tight tracking-tight">{title}</h1>
+      <h1 className="truncate text-[17px] font-extrabold leading-tight tracking-tight">{title}</h1>
     </div>
   );
 }
@@ -286,7 +291,10 @@ export default function Layout({ children }: { children: ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-surface px-4 py-3 sm:px-7 lg:h-16 lg:py-0">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="lg:hidden"><MobileHeading /></div>
+            <div className="flex min-w-0 items-center gap-2 lg:hidden">
+              <BudgetIQIcon size={34} className="shrink-0" />
+              <MobileHeading />
+            </div>
             <div className="hidden lg:block"><YearMonthBar /></div>
           </div>
           <div className="flex items-center gap-2">

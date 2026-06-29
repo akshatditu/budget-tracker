@@ -1,4 +1,4 @@
-import { BudgetIQIcon } from "../components/Logo";
+import { BudgetIQIcon, BudgetIQText } from "../components/Logo";
 
 // In dev the login link must hit the backend port directly so the OAuth state
 // cookie is set and read on the same origin (localhost:8000 both ways).
@@ -11,12 +11,10 @@ export default function Login() {
   return (
     <div className="grid h-full place-items-center bg-canvas p-6">
       <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-8 text-center shadow-sm">
-        <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#0F172A]">
-          <BudgetIQIcon size={38} />
+        <div className="mx-auto w-fit">
+          <BudgetIQIcon size={56} />
         </div>
-        <h1 className="mt-4 text-xl font-bold tracking-tight">
-          Budget<span className="text-brand">IQ</span>
-        </h1>
+        <BudgetIQText className="mt-4 block text-2xl" />
         <p className="mt-1 text-xs font-medium uppercase tracking-widest text-muted">
           Track&nbsp;·&nbsp;Analyze&nbsp;·&nbsp;Optimize
         </p>

@@ -46,11 +46,15 @@ export default function Footer() {
         <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
             <a href="#top" className="flex items-center gap-2.5">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#0F172A]">
-                <BudgetIQIcon size={26} />
-              </span>
-              <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-                Budget<span className="text-brand">IQ</span>
+              <BudgetIQIcon size={36} />
+              <span
+                className="text-lg font-bold tracking-tight text-slate-900 dark:text-white"
+                style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}
+              >
+                Budget
+                <span className="bg-gradient-to-br from-[#0f9d8f] to-[#7c3aed] bg-clip-text font-extrabold text-transparent dark:from-[#2dd4bf] dark:to-[#a78bfa]">
+                  IQ
+                </span>
               </span>
             </a>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-500 dark:text-slate-400">
