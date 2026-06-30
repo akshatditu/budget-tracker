@@ -8,7 +8,7 @@ from app.core.deps import get_current_user, get_year_or_404
 from app.models import MonthlySetting, User
 from app.schemas import MonthlySettingPatch, UserOut, UserUpdate
 from app.services import rollup
-from app.services.carryforward import carry_forward_chain, carry_forward_for_month
+from app.services.carryforward import carry_forward_chain
 
 router = APIRouter(prefix="/api", tags=["views"])
 
@@ -35,7 +35,17 @@ def month_view(year: int, month: int, db: Session = Depends(get_db), user: User 
         raise HTTPException(400, "month must be 1..12")
     by = get_year_or_404(year, db, user)
     view = rollup.month_view(db, by, user, month)
-    cf = carry_forward_for_month(db, by, month)
+    chain = carry_forward_chain(db, by)
+    cf = chain[month - 1]
+    # True liquid cash through this month: the carry-forward pool (which retains investment
+    # cash) less the investments actually made so far. Same basis as the dashboard's in-bank.
+    available_cash = cf["carry_out"] - sum(r["invested"] for r in chain[:month])
+    # Cap "safe to spend" by real cash, not just budget slack — you can't safely spend money
+    # you don't have, even if the envelope still shows room.
+    spending_remaining = sum(s["totals"]["remaining"] for s in view["sections"] if s["kind"] != "investment")
+    dl = view["summary"]["days_left"]
+    view["summary"]["safe_to_spend_today"] = (min(max(0.0, spending_remaining), max(0.0, available_cash)) / dl) if dl else 0.0
+    view["summary"]["available_cash"] = available_cash
     setting = db.scalars(
         select(MonthlySetting).where(MonthlySetting.budget_year_id == by.id, MonthlySetting.month == month)
     ).first()

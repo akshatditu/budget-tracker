@@ -19,7 +19,7 @@ from app.models import (
     Transaction,
     User,
 )
-from app.routers.views import dashboard
+from app.routers.views import dashboard, month_view as month_view_route
 from app.services import rollup
 from app.services.carryforward import carry_forward_chain
 from app.services.rollup import annual_rollup, month_view
@@ -127,3 +127,21 @@ def test_dashboard_remaining_in_bank_ignores_future_investments(db, fixture_data
     assert kpis["remaining_in_bank"] == 19000.0 - 5000.0
     # The full-year invested KPI still reflects both investments.
     assert kpis["invested"] == 8000.0
+
+
+def test_month_view_safe_to_spend_capped_by_available_cash(db, fixture_data, monkeypatch):
+    """Safe-to-spend can't exceed real liquid cash, even when budget slack is larger."""
+    user, by = fixture_data
+    grocery = db.query(Subcategory).filter(Subcategory.name == "Grocery").one()
+    # Generous grocery budget so budget slack (50000 - 1000 = 49000) dwarfs available cash.
+    db.add(MonthlyBudget(budget_year_id=by.id, subcategory_id=grocery.id, month=1, initial_amount=50000, revised_amount=50000))
+    db.commit()
+    # Deterministic days-left so the test doesn't drift with the calendar.
+    monkeypatch.setattr(rollup, "days_left_in_month", lambda *a, **k: 10)
+
+    summary = month_view_route(by.year, 1, db, user)["summary"]
+
+    # carry_out(Jan) 19000 - invested 5000 = 14000 liquid cash.
+    assert summary["available_cash"] == 14000.0
+    # Capped by cash: min(49000 budget, 14000 cash) / 10 days = 1400 (not 4900 from budget alone).
+    assert summary["safe_to_spend_today"] == 1400.0

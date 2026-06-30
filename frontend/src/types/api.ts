@@ -299,10 +299,13 @@ export interface MonthSummary {
   spent: number;
   invested: number;
   section_totals: Record<string, number>;
+  /** This month's cash flow only: income − spent − invested. */
   remaining_in_bank: number;
+  /** True liquid balance through this month, carry-forward inclusive (matches the dashboard). */
+  available_cash: number;
   /** Days remaining in the month (0 for past months, full length for future). */
   days_left: number;
-  /** Spending-only remaining budget paced over the days left in the month. */
+  /** Remaining spending budget paced over days left, capped by available_cash. */
   safe_to_spend_today: number;
   carry_forward: CarryForwardRow;
   spend_limit: number | null;

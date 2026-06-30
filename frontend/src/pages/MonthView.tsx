@@ -296,7 +296,8 @@ export default function MonthView() {
             </div>
             <div className="text-right">
               <div className="text-[11px] font-bold uppercase tracking-[.04em] text-dim">In bank</div>
-              <div className="num mt-0.5 text-[20px] font-extrabold" style={{ color: "var(--pos)" }}>{moneyCompact(s.remaining_in_bank)}</div>
+              <div className={`num mt-0.5 text-[20px] font-extrabold ${s.available_cash < 0 ? "text-neg" : "text-pos"}`}>{moneyCompact(s.available_cash)}</div>
+              <div className="mt-0.5 text-[11px] font-medium text-dim">{MONTH_NAMES[month - 1]}: {moneyCompact(s.remaining_in_bank)}</div>
             </div>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
