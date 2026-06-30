@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { useApp } from "../lib/AppContext";
@@ -9,8 +10,24 @@ import ReviseBudget from "../components/ReviseBudget";
 
 const card = "rounded-[var(--radius)] border border-line bg-surface p-[18px] shadow-[var(--shadow)]";
 
+const INVESTED = "#8b5cf6";
+
+/** Reactive match for Tailwind's `lg` breakpoint (1024px), to flip the chart's bar axis. */
+function useIsDesktop() {
+  const [wide, setWide] = useState(() =>
+    typeof window === "undefined" ? true : window.matchMedia("(min-width: 1024px)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const on = () => setWide(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return wide;
+}
+
 export default function Dashboard() {
   const { year } = useApp();
+  const isDesktop = useIsDesktop();
   const { data, isLoading, isError } = useDashboard(year);
 
   if (isLoading) return <p className="text-sm text-dim">Loading…</p>;
@@ -25,8 +42,8 @@ export default function Dashboard() {
   const bars = data.section_split.filter((s) => s.kind !== "investment" && s.spent > 0);
   const maxBar = Math.max(...bars.map((b) => b.spent), 1);
 
-  const trend = data.monthly_trend.slice(-6);
-  const maxTrend = Math.max(...trend.map((m) => Math.max(m.budget, m.spent)), 1);
+  const trend = data.monthly_trend.slice(0, k.elapsed_months);
+  const maxTrend = Math.max(...trend.map((m) => Math.max(m.spent, m.invested)), 1);
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-3.5">
@@ -118,30 +135,52 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Last 6 months — spent vs plan */}
+      {/* This year — spent vs invested, per month */}
       <div className={card}>
         <div className="mb-4 flex items-baseline justify-between">
-          <span className="text-[15px] font-extrabold tracking-tight">Last 6 months</span>
-          <span className="text-[11.5px] font-semibold text-dim">spent vs plan</span>
+          <span className="text-[15px] font-extrabold tracking-tight">This year</span>
+          <span className="text-[11.5px] font-semibold text-dim">spent vs invested</span>
         </div>
-        <div className="flex h-28 items-end justify-between gap-2">
-          {trend.map((m) => {
-            const over = m.spent > m.budget;
-            return (
-              <div key={m.month} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
-                <div className="relative flex h-20 w-full items-end justify-center">
-                  <div className="absolute bottom-0 w-[70%] rounded-t-md bg-surface2" style={{ height: `${(m.budget / maxTrend) * 100}%` }} />
-                  <div className="absolute bottom-0 w-[70%] rounded-t-md" style={{ height: `${(m.spent / maxTrend) * 100}%`, background: over ? "var(--neg)" : "var(--accent)" }} title={`${m.month}: ${money(m.spent)} / ${money(m.budget)}`} />
+        <div className="flex flex-col gap-2 lg:h-28 lg:flex-row lg:items-end lg:justify-between">
+          {trend.map((m) =>
+            isDesktop ? (
+              <div key={m.month} className="group relative flex h-full flex-1 flex-col items-center justify-end gap-2">
+                <div className="flex h-20 w-full items-end justify-center gap-1">
+                  <div className="w-[40%] rounded-t-md" style={{ height: `${(m.spent / maxTrend) * 100}%`, background: "var(--accent)" }} />
+                  <div className="w-[40%] rounded-t-md" style={{ height: `${(m.invested / maxTrend) * 100}%`, background: INVESTED }} />
                 </div>
                 <span className="text-[10.5px] font-semibold text-dim">{m.month}</span>
+                <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-[var(--radiusSm)] border border-line bg-surface px-2.5 py-1.5 text-[11px] font-semibold shadow-[var(--shadow)] group-hover:block">
+                  <div className="mb-1 font-bold">{m.month}</div>
+                  <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-[2px]" style={{ background: "var(--accent)" }} /> <span className="num">{money(m.spent)}</span> spent</div>
+                  <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-[2px]" style={{ background: INVESTED }} /> <span className="num">{money(m.invested)}</span> invested</div>
+                </div>
               </div>
-            );
-          })}
+            ) : (
+              <div key={m.month} className="flex items-center gap-2">
+                <span className="w-9 shrink-0 text-[11px] font-semibold text-dim">{m.month}</span>
+                <div className="flex flex-1 flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <div className="min-w-0 flex-1">
+                      <div className="h-2.5 rounded-r-md" style={{ width: `${(m.spent / maxTrend) * 100}%`, background: "var(--accent)", minWidth: m.spent > 0 ? 2 : 0 }} />
+                    </div>
+                    <span className="num w-14 shrink-0 text-right text-[10px] font-semibold text-dim">{moneyCompact(m.spent)}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="min-w-0 flex-1">
+                      <div className="h-2.5 rounded-r-md" style={{ width: `${(m.invested / maxTrend) * 100}%`, background: INVESTED, minWidth: m.invested > 0 ? 2 : 0 }} />
+                    </div>
+                    <span className="num w-14 shrink-0 text-right text-[10px] font-semibold text-dim">{moneyCompact(m.invested)}</span>
+                  </div>
+                </div>
+              </div>
+            ),
+          )}
         </div>
         <div className="mt-3 flex items-center gap-4 text-[11px] font-semibold text-dim">
           <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: "var(--accent)" }} /> Spent</span>
-          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px] bg-surface2" /> Plan</span>
-          <span className="ml-auto num">{moneyCompact(k.spent)} spent YTD</span>
+          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: INVESTED }} /> Invested</span>
+          <span className="ml-auto num">{moneyCompact(k.spent)} spent · {moneyCompact(k.invested)} invested</span>
         </div>
       </div>
     </div>

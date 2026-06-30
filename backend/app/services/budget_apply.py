@@ -61,3 +61,42 @@ def apply_annual_budget(
                 existing.revised_amount = per_month
     db.flush()
     return per_month
+
+
+def apply_revised_budget(
+    db: Session,
+    year_id: int,
+    sub_id: int,
+    annual_amount: float,
+) -> float:
+    """Set ``revised_amount`` for all 12 months to the per-month split of ``annual_amount``,
+    leaving ``initial_amount`` and the ``AnnualBudget`` untouched.
+
+    Used by the AI revision accept: a revision only moves the editable ``revised`` lever — the
+    initial budget is the user's baseline and must never change. The whole year is overwritten so
+    the saved annual revised total equals exactly the figure shown in the revision drawer. Flushes
+    but does not commit. Returns the per-month amount.
+    """
+    per_month = round(annual_amount / 12, 2)
+    for m in MONTHS:
+        existing = db.scalars(
+            select(MonthlyBudget).where(
+                MonthlyBudget.budget_year_id == year_id,
+                MonthlyBudget.subcategory_id == sub_id,
+                MonthlyBudget.month == m,
+            )
+        ).first()
+        if existing is None:
+            db.add(
+                MonthlyBudget(
+                    budget_year_id=year_id,
+                    subcategory_id=sub_id,
+                    month=m,
+                    initial_amount=0,
+                    revised_amount=per_month,
+                )
+            )
+        else:
+            existing.revised_amount = per_month
+    db.flush()
+    return per_month

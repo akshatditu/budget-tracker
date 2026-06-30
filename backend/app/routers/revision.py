@@ -12,9 +12,9 @@ from app.core.database import get_db
 from app.core.deps import get_current_user, get_year_or_404
 from app.models import BudgetRevisionDraft, BudgetRevisionItem, Category, Subcategory, User
 from app.schemas import BudgetRevisionDraftOut, RevisionGeneratePayload
-from app.services.budget_apply import apply_annual_budget
+from app.services.budget_apply import apply_revised_budget
 from app.services.revise_budget import build_context, generate_revision, rule_based_revision
-from app.services.rollup import elapsed_months, f
+from app.services.rollup import f
 
 router = APIRouter(prefix="/api/years/{year}", tags=["revision"])
 
@@ -128,18 +128,16 @@ def generate_budget_revision(
 
 @router.post("/budget-revision/accept", response_model=BudgetRevisionDraftOut)
 def accept_budget_revision(year: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Apply the pending draft's revised amounts forward (current + future months) and mark it
-    accepted. The accepted draft is kept as the new baseline for future revisions."""
+    """Apply the pending draft's revised amounts across the whole year (every month's revised set
+    to the new rate; the initial budget is left untouched) and mark it accepted. The accepted draft
+    is kept as the new baseline for future revisions."""
     by = get_year_or_404(year, db, user)
     draft = _pending_draft(db, user.id, by.id)
     if draft is None:
         raise HTTPException(404, "No pending revision to accept")
 
-    from_month = elapsed_months(year)
     for it in draft.items:
-        apply_annual_budget(
-            db, by.id, it.subcategory_id, f(it.revised_annual), reset_revised=True, from_month=from_month
-        )
+        apply_revised_budget(db, by.id, it.subcategory_id, f(it.revised_annual))
     draft.status = ACCEPTED
     draft.accepted_at = datetime.now(timezone.utc)
     db.commit()

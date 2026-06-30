@@ -14,12 +14,15 @@ from app.models import (
     BudgetYear,
     Category,
     Income,
+    MonthlyBudget,
     Subcategory,
     Transaction,
     User,
 )
+from app.routers.views import dashboard
+from app.services import rollup
 from app.services.carryforward import carry_forward_chain
-from app.services.rollup import month_view
+from app.services.rollup import annual_rollup, month_view
 
 
 @pytest.fixture
@@ -71,8 +74,8 @@ def test_month_view_splits_spent_and_invested(db, fixture_data):
 
     assert summary["spent"] == 1000.0       # grocery only — investments excluded
     assert summary["invested"] == 5000.0    # SIPs surfaced separately
-    # Invested money stays retained, so it is not subtracted from the bank.
-    assert summary["remaining_in_bank"] == 20000.0 - 1000.0
+    # Invested cash leaves the bank, so it is deducted alongside spend.
+    assert summary["remaining_in_bank"] == 20000.0 - 1000.0 - 5000.0
 
 
 def test_carry_forward_excludes_investments(db, fixture_data):
@@ -84,3 +87,43 @@ def test_carry_forward_excludes_investments(db, fixture_data):
     assert jan["net"] == 20000.0 - 1000.0
     # carry_out = income - spend (investment cash is retained in the pool).
     assert jan["carry_out"] == 19000.0
+
+
+def test_annual_plan_excludes_investments(db, fixture_data):
+    """The 'left to spend' pool must plan only consumption — the investment budget is
+    retained wealth and should not inflate annual_plan (only "invested" tracks it)."""
+    user, by = fixture_data
+    grocery = db.query(Subcategory).filter(Subcategory.name == "Grocery").one()
+    sip = db.query(Subcategory).filter(Subcategory.name == "SIPs").one()
+    # January revised budgets: 2000 to spend on groceries, 5000 earmarked for SIPs.
+    db.add_all([
+        MonthlyBudget(budget_year_id=by.id, subcategory_id=grocery.id, month=1, initial_amount=2000, revised_amount=2000),
+        MonthlyBudget(budget_year_id=by.id, subcategory_id=sip.id, month=1, initial_amount=5000, revised_amount=5000),
+    ])
+    db.commit()
+
+    totals = annual_rollup(db, by, user)["totals"]
+
+    # Plan counts only the spending section, not the SIP investment budget.
+    assert totals["annual_plan"] == 2000.0
+    # The invested spend is still tracked separately.
+    assert totals["invested"] == 5000.0
+
+
+def test_dashboard_remaining_in_bank_ignores_future_investments(db, fixture_data, monkeypatch):
+    """Liquid bank must net out only investments that have already happened. A future-dated
+    investment (still ahead of the elapsed window) shouldn't lower today's bank balance."""
+    user, by = fixture_data
+    sip = db.query(Subcategory).filter(Subcategory.name == "SIPs").one()
+    # Month 7 is past the elapsed window below; this investment is still in the future.
+    db.add(Transaction(user_id=user.id, budget_year_id=by.id, subcategory_id=sip.id, txn_date=date(2026, 7, 5), amount=3000))
+    db.commit()
+    # Freeze elapsed months at June so the test doesn't drift with the real calendar.
+    monkeypatch.setattr(rollup, "elapsed_months", lambda *a, **k: 6)
+
+    kpis = dashboard(by.year, db, user)["kpis"]
+
+    # carry_out(June) = 20000 - 1000 = 19000; only the Jan 5000 SIP is elapsed.
+    assert kpis["remaining_in_bank"] == 19000.0 - 5000.0
+    # The full-year invested KPI still reflects both investments.
+    assert kpis["invested"] == 8000.0

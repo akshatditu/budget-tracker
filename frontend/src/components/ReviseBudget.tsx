@@ -46,16 +46,17 @@ export default function ReviseBudget({ className = "", banner = false }: { class
       {banner ? (
         <button
           onClick={() => setOpen(true)}
-          className={`flex w-full items-center gap-3.5 rounded-[var(--radius)] border border-line bg-surface p-[17px] text-left ${className}`}
+          className={`flex w-full items-center gap-3.5 rounded-[var(--radius)] p-[17px] text-left text-white ${className}`}
+          style={{ background: "linear-gradient(135deg, var(--accent), var(--accent2))", boxShadow: "0 10px 26px color-mix(in srgb, var(--accent) 35%, transparent)" }}
         >
-          <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[13px]" style={{ background: "color-mix(in srgb, var(--accent) 14%, transparent)", color: "var(--accent)" }}>
+          <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[13px] bg-white/20">
             <Sparkles size={20} />
           </span>
           <span className="flex-1">
-            <span className="block text-[15.5px] font-extrabold tracking-tight text-ink">Revise with AI</span>
-            <span className="mt-0.5 block text-xs font-semibold text-dim">Tune your budget to how you actually spend.</span>
+            <span className="block text-[15.5px] font-extrabold tracking-tight">Revise with AI</span>
+            <span className="mt-0.5 block text-xs font-semibold opacity-90">Tune your budget to how you actually spend.</span>
           </span>
-          <ChevronRight size={18} className="text-dim" />
+          <ChevronRight size={18} className="opacity-90" />
         </button>
       ) : (
         <Button variant="outline" className={className} onClick={() => setOpen(true)}>
@@ -221,7 +222,7 @@ function ReviewPane({
       <div className="flex-1 overflow-y-auto p-5">
         <p className="mb-4 text-sm font-medium text-dim">
           {changed > 0
-            ? `Reallocated across ${changed} ${changed === 1 ? "category" : "categories"} — fixed bills untouched. Review, then accept or discard.`
+            ? `Reallocated across ${changed} ${changed === 1 ? "category" : "categories"} — fixed bills untouched. Accepting updates your full-year budget. Review, then accept or discard.`
             : "Your budget already matches your spending — no meaningful changes suggested."}
         </p>
 

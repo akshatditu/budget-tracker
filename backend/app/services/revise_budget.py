@@ -157,6 +157,30 @@ def _fit_envelope(items_out: list[dict], envelope: float) -> list[dict]:
     return items_out
 
 
+_UP_WORDS = ("increas", "raise", "raised", "boost", "bump", "more", "higher", "grew", "grow", "topped up")
+_DOWN_WORDS = ("reduc", "trim", "cut", "lower", "decreas", "less", "shrink", "scaled back", "pared", "redirect")
+
+
+def _reconcile_reason(reason: str, current: float, revised: float) -> str:
+    """Keep the reason consistent with the *realized* number. Envelope scaling can flip a bucket's
+    direction after the reason was written (e.g. a planned bump ends up a cut once the total is
+    fitted to income), leaving "slightly increased" on a decreased budget. When the wording clearly
+    contradicts the actual change, replace it with a numerically-true sentence; otherwise keep it."""
+    text = (reason or "").lower()
+    claims_up = any(w in text for w in _UP_WORDS)
+    claims_down = any(w in text for w in _DOWN_WORDS)
+    up = revised > current + 0.5
+    down = revised < current - 0.5
+    same = not up and not down
+    if down and claims_up and not claims_down:
+        return "Reduced to keep your overall budget within your income."
+    if up and claims_down and not claims_up:
+        return "Increased to better match how much you actually spend here."
+    if same and (claims_up or claims_down):
+        return "Kept the same — already in line with your spending."
+    return reason or ""
+
+
 def generate_revision(
     *, currency: str, context: dict, user_note: str | None
 ) -> dict | None:
@@ -232,6 +256,9 @@ def generate_revision(
             amount = by_id[sid]["current_monthly"]
         out_items.append({"subcategory_id": sid, "monthly_amount": amount, "reason": str(row.get("reason", ""))})
     out_items = _fit_envelope(out_items, context["envelope_monthly"])
+    for o in out_items:
+        cur = by_id[o["subcategory_id"]]["current_monthly"]
+        o["reason"] = _reconcile_reason(o["reason"], cur, o["monthly_amount"])
     insights = [str(s) for s in parsed.get("insights", []) if str(s).strip()][:5]
     return {"items": out_items, "insights": insights}
 
@@ -261,6 +288,9 @@ def rule_based_revision(*, context: dict, user_note: str | None) -> dict:
                 reason = "On track with your spending — left unchanged."
         out_items.append({"subcategory_id": it["subcategory_id"], "monthly_amount": max(amount, 0.0), "reason": reason})
     out_items = _fit_envelope(out_items, context["envelope_monthly"])
+    cur_by_id = {it["subcategory_id"]: it["current_monthly"] for it in items}
+    for o in out_items:
+        o["reason"] = _reconcile_reason(o["reason"], cur_by_id[o["subcategory_id"]], o["monthly_amount"])
 
     insights: list[str] = []
     over = max(items, key=lambda it: it["overspent"], default=None)

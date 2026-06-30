@@ -1,6 +1,6 @@
 """AI budget revision. The rule-based fallback nudges each bucket toward its actual run-rate;
-the end-to-end flow enforces one pending draft at a time and applies an accepted draft *forward*
-(current + future months) while leaving elapsed months untouched."""
+the end-to-end flow enforces one pending draft at a time and applies an accepted draft across the
+*whole year* (every month's revised set to the new rate) while never touching the initial budget."""
 import pytest
 from datetime import date
 from fastapi.testclient import TestClient
@@ -56,7 +56,7 @@ def test_rule_based_nudges_toward_actuals():
 
 
 # --------------------------------------------------------------------------- #
-# End-to-end: generate -> 409 -> accept (forward) -> discard
+# End-to-end: generate -> 409 -> accept (whole year, initial untouched) -> discard
 # --------------------------------------------------------------------------- #
 @pytest.fixture
 def client(monkeypatch):
@@ -113,9 +113,15 @@ def _revised(db, sub_id, month):
     return float(mb.revised_amount)
 
 
-def test_generate_then_block_then_accept_forward(client):
+def _initial(db, sub_id, month):
+    mb = db.scalars(
+        select(MonthlyBudget).where(MonthlyBudget.subcategory_id == sub_id, MonthlyBudget.month == month)
+    ).first()
+    return float(mb.initial_amount)
+
+
+def test_generate_then_block_then_accept_whole_year(client):
     tc, db, grocery_id = client
-    current = elapsed_months(YEAR)
 
     # Generate a draft — does not touch the live budget yet.
     resp = tc.post(f"/api/years/{YEAR}/budget-revision", json={"user_note": "spending more on food"})
@@ -128,11 +134,16 @@ def test_generate_then_block_then_accept_forward(client):
     # A second generation while one is pending is refused.
     assert tc.post(f"/api/years/{YEAR}/budget-revision", json={}).status_code == 409
 
-    # Accept applies the revision forward only.
+    # Accept applies the revision across the whole year: every month's revised becomes the new
+    # per-month rate, so the saved annual matches exactly the figure shown in the drawer.
     assert tc.post(f"/api/years/{YEAR}/budget-revision/accept").status_code == 200
-    if current > 1:
-        assert _revised(db, grocery_id, 1) == 1000  # elapsed month preserved
-    assert _revised(db, grocery_id, 12) != 1000     # future month revised
+    revised_annual = draft["items"][0]["revised_annual"]
+    per_month = round(revised_annual / 12, 2)
+    assert per_month != 1000  # the budget actually changed
+    assert all(_revised(db, grocery_id, m) == per_month for m in range(1, 13))
+
+    # The initial budget is the baseline and must never be touched by a revision.
+    assert all(_initial(db, grocery_id, m) == 1000 for m in range(1, 13))
 
     # The accepted draft is no longer pending.
     assert tc.get(f"/api/years/{YEAR}/budget-revision").json() is None

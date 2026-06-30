@@ -299,8 +299,8 @@ export default function MonthView() {
               <div className="num mt-0.5 text-[20px] font-extrabold" style={{ color: "var(--pos)" }}>{moneyCompact(s.remaining_in_bank)}</div>
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-3 gap-2.5">
-            {([["Income", s.income], ["Budget", s.budget_total], ["Spent", s.spent]] as const).map(([label, v]) => (
+          <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+            {([["Income", s.income], ["Budget", s.budget_total], ["Spent", s.spent], ["Invested", s.invested]] as const).map(([label, v]) => (
               <div key={label} className="rounded-[var(--radiusXs)] bg-surface2 px-3 py-2.5">
                 <div className="text-[10.5px] font-bold text-dim">{label}</div>
                 <div className="num mt-0.5 text-[15px] font-extrabold">{moneyCompact(v)}</div>

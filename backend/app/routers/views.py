@@ -100,6 +100,10 @@ def dashboard(year: int, db: Session = Depends(get_db), user: User = Depends(get
 
     income_total = roll["totals"]["income"]
     spent_total = roll["totals"]["spent"]
+    # Liquid bank = carry-forward pool less money already moved into investments. Keep both
+    # sides in the same elapsed-month window (roll totals are full-year, so future-dated
+    # investments would otherwise be subtracted from a balance that hasn't earned them yet).
+    invested_elapsed = sum(r["invested"] for r in chain[:elapsed])
     # Forecast: extrapolate spending sections' burn rate to the full year.
     spending_pva = [r for r in roll["plan_vs_actual"] if r["section"] in spending_sections]
     projected_spend = sum(r["projected_annual"] for r in spending_pva)
@@ -112,7 +116,7 @@ def dashboard(year: int, db: Session = Depends(get_db), user: User = Depends(get
             "invested": roll["totals"]["invested"],
             "current": roll["totals"]["current"],
             "overspent": roll["totals"]["overspent"],
-            "remaining_in_bank": (chain[elapsed - 1]["carry_out"] - roll["totals"]["invested"]) if elapsed > 0 else 0.0,
+            "remaining_in_bank": (chain[elapsed - 1]["carry_out"] - invested_elapsed) if elapsed > 0 else 0.0,
             "projected_spend": projected_spend,
             "projected_remaining_in_bank": income_total - projected_spend,
             "elapsed_months": elapsed,

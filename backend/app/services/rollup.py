@@ -189,7 +189,8 @@ def month_view(db: Session, by: BudgetYear, user, month: int) -> dict:
 
     income = incomes.get(month, 0.0)
     budget_total = sum(section_totals.values())
-    # Investments are retained wealth: kept out of "spent" and not subtracted from the bank.
+    # Investments are split out of "spent" (tracked separately), but they still leave the
+    # bank as cash, so they are deducted from the liquid bank figure below.
     total_spent = sum(s["totals"]["spent"] for s in sections if s["kind"] != "investment")
     total_invested = sum(s["totals"]["spent"] for s in sections if s["kind"] == "investment")
 
@@ -213,7 +214,7 @@ def month_view(db: Session, by: BudgetYear, user, month: int) -> dict:
             "spent": total_spent,
             "invested": total_invested,
             "section_totals": section_totals,
-            "remaining_in_bank": income - total_spent,
+            "remaining_in_bank": income - total_spent - total_invested,
             "days_left": days_left,
             "safe_to_spend_today": safe_to_spend_today,
         },
@@ -314,8 +315,8 @@ def annual_rollup(db: Session, by: BudgetYear, user) -> dict:
         "income_by_month": [incomes.get(m, 0.0) for m in MONTHS],
         "plan_vs_actual": plan_vs_actual,
         "totals": {
-            "annual_plan": sum(s["totals"]["revised"] for s in sections),
-            # Spent/current cover consumption only; investments are retained wealth.
+            # Plan/spent/current cover consumption only; investments are retained wealth (tracked in "invested").
+            "annual_plan": sum(s["totals"]["revised"] for s in sections if s["kind"] != "investment"),
             "spent": sum(s["totals"]["spent"] for s in sections if s["kind"] != "investment"),
             "current": sum(s["totals"]["current"] for s in sections if s["kind"] != "investment"),
             "overspent": sum(s["totals"]["overspent"] for s in sections if s["kind"] != "investment"),
