@@ -59,7 +59,7 @@ export default function Stats() {
             transition={{ delay: i * 0.1, duration: 0.5 }}
             className="text-center"
           >
-            <p className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-4xl dark:from-blue-400 dark:to-indigo-300">
+            <p className="bg-gradient-to-r from-teal-600 to-violet-600 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-4xl dark:from-teal-400 dark:to-violet-400">
               <Counter to={s.value} prefix={s.prefix} suffix={s.suffix} />
             </p>
             <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">{s.label}</p>

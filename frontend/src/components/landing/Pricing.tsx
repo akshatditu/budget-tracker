@@ -60,7 +60,7 @@ export default function Pricing() {
               transition={{ delay: i * 0.1, duration: 0.5 }}
               className={`relative flex flex-col rounded-3xl border p-7 ${
                 p.featured
-                  ? "border-transparent bg-gradient-to-b from-blue-600 to-indigo-600 text-white shadow-2xl shadow-blue-600/30 lg:-mt-4 lg:mb-0"
+                  ? "border-transparent bg-gradient-to-b from-teal-600 to-violet-600 text-white shadow-2xl shadow-teal-600/30 lg:-mt-4 lg:mb-0"
                   : "border-slate-200 bg-white text-slate-900 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-white"
               }`}
             >
@@ -70,10 +70,10 @@ export default function Pricing() {
                 </span>
               )}
               <h3 className={`text-lg font-bold ${p.featured ? "text-white" : "text-slate-900 dark:text-white"}`}>{p.name}</h3>
-              <p className={`mt-1 text-sm ${p.featured ? "text-blue-100" : "text-slate-500 dark:text-slate-400"}`}>{p.tagline}</p>
+              <p className={`mt-1 text-sm ${p.featured ? "text-teal-100" : "text-slate-500 dark:text-slate-400"}`}>{p.tagline}</p>
               <div className="mt-5 flex items-baseline gap-1.5">
                 <span className="text-4xl font-extrabold tracking-tight">{p.price}</span>
-                <span className={`text-sm ${p.featured ? "text-blue-100" : "text-slate-500 dark:text-slate-400"}`}>/{p.period}</span>
+                <span className={`text-sm ${p.featured ? "text-teal-100" : "text-slate-500 dark:text-slate-400"}`}>/{p.period}</span>
               </div>
 
               <ul className="mt-6 flex-1 space-y-3">
@@ -82,7 +82,7 @@ export default function Pricing() {
                     <span className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full ${p.featured ? "bg-white/20 text-white" : "bg-brand/10 text-brand"}`}>
                       <Check size={11} strokeWidth={3} />
                     </span>
-                    <span className={p.featured ? "text-blue-50" : "text-slate-700 dark:text-slate-200"}>{f}</span>
+                    <span className={p.featured ? "text-teal-50" : "text-slate-700 dark:text-slate-200"}>{f}</span>
                   </li>
                 ))}
               </ul>
@@ -91,8 +91,8 @@ export default function Pricing() {
                 href={loginHref}
                 className={`mt-7 inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold transition ${
                   p.featured
-                    ? "bg-white text-brand hover:bg-blue-50"
-                    : "bg-slate-900 text-white hover:opacity-90 dark:bg-white dark:text-slate-900"
+                    ? "bg-white text-brand hover:bg-teal-50"
+                    : "bg-slate-900 text-white hover:opacity-90 dark:bg-white/10 dark:text-white"
                 }`}
               >
                 {p.cta}

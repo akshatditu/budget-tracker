@@ -1,54 +1,46 @@
-import { motion } from "framer-motion";
-import { UserPlus, ListPlus, Tags, LineChart, TrendingUp, type LucideIcon } from "lucide-react";
-import { SectionHeading } from "./shared";
+import { Reveal, SectionHeading } from "./shared";
 
-const STEPS: { icon: LucideIcon; title: string; desc: string }[] = [
-  { icon: UserPlus, title: "Create Account", desc: "Sign in with Google in one click — no forms, no setup friction." },
-  { icon: ListPlus, title: "Add Transactions", desc: "Log expenses fast, or import them. Your ledger fills up in minutes." },
-  { icon: Tags, title: "AI Categorizes", desc: "BudgetIQ sorts every entry into the right bucket automatically." },
-  { icon: LineChart, title: "View Insights", desc: "Dashboards and AI answers reveal exactly where your money goes." },
-  { icon: TrendingUp, title: "Save More", desc: "Act on recommendations, hit your goals, and keep more each month." },
+const STEPS = [
+  { n: "1", title: "Create Account", desc: "Sign up free in under a minute — no card required.", accent: false },
+  { n: "2", title: "Add Transactions", desc: "Import, sync, or log spending in a couple of taps.", accent: false },
+  { n: "3", title: "AI Categorizes", desc: "Every expense is sorted and tagged automatically.", accent: true },
+  { n: "4", title: "View Insights", desc: "See trends, alerts, and AI advice on one dashboard.", accent: false },
+  { n: "5", title: "Save More", desc: "Hit goals faster and watch your savings grow.", accent: false },
 ];
 
 export default function HowItWorks() {
   return (
-    <section className="border-y border-slate-200/70 bg-white/50 py-24 backdrop-blur sm:py-32 dark:border-white/10 dark:bg-white/[0.02]">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <SectionHeading
-          eyebrow="How It Works"
-          title={<>From zero to in control in <span className="text-brand">five steps</span></>}
-          subtitle="No accounting degree required. BudgetIQ does the heavy lifting so you just make better decisions."
-        />
+    <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-20 lg:px-8">
+      <SectionHeading
+        eyebrow="How it works"
+        title="From sign-up to savings in 5 steps"
+        className="mb-12 sm:mb-14"
+      />
 
-        <div className="relative mt-16">
-          {/* connecting line (desktop) */}
-          <div aria-hidden className="absolute left-0 right-0 top-7 hidden h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent lg:block dark:via-white/15" />
-          <div className="grid gap-10 lg:grid-cols-5">
-            {STEPS.map((s, i) => {
-              const Icon = s.icon;
-              return (
-                <motion.div
-                  key={s.title}
-                  initial={{ opacity: 0, y: 24 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-60px" }}
-                  transition={{ delay: i * 0.12, duration: 0.5 }}
-                  className="relative text-center"
-                >
-                  <div className="relative z-10 mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25">
-                    <Icon size={24} />
-                    <span className="absolute -right-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full border-2 border-white bg-slate-900 text-[11px] font-bold text-white dark:border-slate-950">
-                      {i + 1}
-                    </span>
-                  </div>
-                  <h3 className="mt-4 text-base font-bold text-slate-900 dark:text-white">{s.title}</h3>
-                  <p className="mx-auto mt-1.5 max-w-[14rem] text-sm leading-relaxed text-slate-600 dark:text-slate-300">{s.desc}</p>
-                </motion.div>
-              );
-            })}
+      <Reveal className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-5">
+        {STEPS.map((s) => (
+          <div
+            key={s.n}
+            className="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm dark:border-white/10 dark:bg-[#12161f] dark:shadow-black/30"
+          >
+            <div
+              className={`font-display mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl text-xl font-extrabold ${
+                s.accent
+                  ? "bg-gradient-to-br from-teal-600 to-violet-600 text-white"
+                  : s.n === "5"
+                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                    : "bg-teal-600/10 text-teal-700 dark:bg-teal-400/10 dark:text-teal-300"
+              }`}
+            >
+              {s.n}
+            </div>
+            <div className="font-display mb-1.5 text-base font-bold text-slate-900 dark:text-white">
+              {s.title}
+            </div>
+            <div className="text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">{s.desc}</div>
           </div>
-        </div>
-      </div>
+        ))}
+      </Reveal>
     </section>
   );
 }

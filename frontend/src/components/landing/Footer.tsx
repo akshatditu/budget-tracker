@@ -1,6 +1,5 @@
-import { Twitter, Github, Linkedin, Instagram } from "lucide-react";
+import { Twitter, Github, Linkedin } from "lucide-react";
 import { BudgetIQIcon } from "../Logo";
-import { loginHref } from "./shared";
 
 const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
@@ -8,35 +7,34 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     links: [
       { label: "Features", href: "#features" },
       { label: "AI Assistant", href: "#ai" },
-      { label: "Screenshots", href: "#screenshots" },
-      { label: "Pricing", href: "#pricing" },
+      { label: "Screenshots", href: "#gallery" },
+      { label: "Pricing", href: "#" },
     ],
   },
   {
     title: "Company",
     links: [
-      { label: "About", href: "#top" },
-      { label: "Blog", href: "#top" },
-      { label: "Careers", href: "#top" },
-      { label: "Contact", href: "#top" },
+      { label: "About", href: "#" },
+      { label: "Blog", href: "#" },
+      { label: "Careers", href: "#" },
+      { label: "Contact", href: "#" },
     ],
   },
   {
-    title: "Resources",
+    title: "Legal",
     links: [
-      { label: "Help Center", href: "#faq" },
-      { label: "Guides", href: "#top" },
-      { label: "Privacy", href: "#top" },
-      { label: "Terms", href: "#top" },
+      { label: "Privacy", href: "#" },
+      { label: "Terms", href: "#" },
+      { label: "Security", href: "#" },
+      { label: "FAQ", href: "#faq" },
     ],
   },
 ];
 
 const SOCIALS = [
   { icon: Twitter, label: "Twitter" },
-  { icon: Github, label: "GitHub" },
   { icon: Linkedin, label: "LinkedIn" },
-  { icon: Instagram, label: "Instagram" },
+  { icon: Github, label: "GitHub" },
 ];
 
 export default function Footer() {
@@ -58,7 +56,7 @@ export default function Footer() {
               </span>
             </a>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-              Smarter budgeting, powered by AI. Track expenses, plan budgets, hit your savings goals.
+              Smarter budgeting, powered by AI. Track, plan, and grow your money with confidence.
             </p>
             <div className="mt-5 flex gap-2.5">
               {SOCIALS.map(({ icon: Icon, label }) => (
@@ -94,9 +92,9 @@ export default function Footer() {
           <p className="text-xs text-slate-500 dark:text-slate-400">
             © {new Date().getFullYear()} BudgetIQ. All rights reserved.
           </p>
-          <a href={loginHref} className="text-xs font-semibold text-brand hover:underline">
-            Get started free →
-          </a>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Made with care for your money.
+          </p>
         </div>
       </div>
     </footer>

@@ -63,10 +63,10 @@ export function Eyebrow({ children }: { children: ReactNode }) {
   );
 }
 
-/** Blue gradient text used in headings. */
+/** Brand gradient text used in headings. */
 export function GradientText({ children }: { children: ReactNode }) {
   return (
-    <span className="lp-animate-gradient bg-gradient-to-r from-blue-600 via-indigo-500 to-sky-500 bg-clip-text text-transparent dark:from-blue-400 dark:via-indigo-300 dark:to-sky-300">
+    <span className="lp-animate-gradient bg-gradient-to-r from-teal-600 via-violet-500 to-teal-400 bg-clip-text text-transparent dark:from-teal-400 dark:via-violet-400 dark:to-teal-300">
       {children}
     </span>
   );
@@ -115,7 +115,7 @@ export function PrimaryButton({
       whileHover={{ scale: 1.03, y: -1 }}
       whileTap={{ scale: 0.97 }}
       transition={{ type: "spring", stiffness: 400, damping: 17 }}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition-shadow hover:shadow-xl hover:shadow-blue-600/40 ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-600/25 transition-shadow hover:shadow-xl hover:shadow-teal-600/40 ${className}`}
     >
       {children}
     </motion.a>

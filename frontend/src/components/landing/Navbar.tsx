@@ -7,8 +7,7 @@ import { loginHref } from "./shared";
 const LINKS = [
   { label: "Features", href: "#features" },
   { label: "AI Assistant", href: "#ai" },
-  { label: "Screenshots", href: "#screenshots" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "Screenshots", href: "#gallery" },
   { label: "FAQ", href: "#faq" },
 ];
 
@@ -82,7 +81,7 @@ export default function Navbar({
           </a>
           <a
             href={loginHref}
-            className="hidden rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition-shadow hover:shadow-xl hover:shadow-blue-600/40 sm:inline-flex"
+            className="hidden rounded-xl bg-gradient-to-r from-teal-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-teal-600/25 transition-shadow hover:shadow-xl hover:shadow-teal-600/40 sm:inline-flex"
           >
             Get Started
           </a>
@@ -118,7 +117,7 @@ export default function Navbar({
               ))}
               <a
                 href={loginHref}
-                className="mt-2 block rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-2.5 text-center text-sm font-semibold text-white"
+                className="mt-2 block rounded-xl bg-gradient-to-r from-teal-600 to-violet-600 px-3 py-2.5 text-center text-sm font-semibold text-white"
               >
                 Get Started
               </a>
