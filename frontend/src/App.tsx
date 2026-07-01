@@ -3,6 +3,7 @@ import { AppProvider } from "./lib/AppContext";
 import { ThemeProvider } from "./lib/theme";
 import { useAuth, useAuthExpiryListener } from "./lib/auth";
 import Layout from "./components/Layout";
+import AppLoader from "./components/AppLoader";
 import Login from "./pages/Login";
 import Landing from "./pages/Landing";
 import Onboarding from "./pages/Onboarding";
@@ -22,9 +23,7 @@ export default function App() {
   const { data: user, isLoading } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="grid h-full place-items-center text-sm text-muted">Loading…</div>
-    );
+    return <AppLoader />;
   }
 
   // Signed-out visitors see the marketing landing page; /login keeps the bare
