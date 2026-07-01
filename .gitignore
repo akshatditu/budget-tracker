@@ -20,4 +20,3 @@ dist/
 budget_dump.sql
 backend/_docker_data_backup.sql
 
-.github/
