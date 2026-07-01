@@ -91,14 +91,14 @@ export default function AddExpenseSheet({ open, onClose }: { open: boolean; onCl
                 onChange={(e) => setAmount(e.target.value)}
                 inputMode="numeric"
                 placeholder="Amount ₹"
-                className="num mt-4 w-full rounded-[var(--radiusXs)] border border-line px-3.5 py-3.5 text-[15px] font-bold text-ink outline-none focus:border-[var(--accent)]"
+                className="num mt-4 w-full rounded-[var(--radiusXs)] border border-line px-3.5 py-3.5 text-base font-bold text-ink outline-none focus:border-[var(--accent)]"
                 style={{ background: "var(--bg)" }}
               />
               <input
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="Note (optional)"
-                className="mt-2.5 w-full rounded-[var(--radiusXs)] border border-line px-3.5 py-3.5 text-sm text-ink outline-none focus:border-[var(--accent)]"
+                className="mt-2.5 w-full rounded-[var(--radiusXs)] border border-line px-3.5 py-3.5 text-base text-ink outline-none focus:border-[var(--accent)]"
                 style={{ background: "var(--bg)" }}
               />
               <button
