@@ -27,14 +27,15 @@ function TransactionDrawer({ year, month, section, sub, onClose }: TransactionDr
   const { data: txns = [] } = useTransactions(year, { month, subcategory_id: sub.subcategory_id });
   const { create, remove } = useTransactionMutations(year);
   const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
   const tone = remTone(sub);
   const barPct = sub.available > 0 ? Math.min(sub.spent / sub.available, 1) * 100 : sub.spent > 0 ? 100 : 0;
 
   const add = () => {
     if (!amount) return;
     create.mutate(
-      { subcategory_id: sub.subcategory_id, txn_date: `${year}-${String(month).padStart(2, "0")}-01`, amount: Number(amount), note: null },
-      { onSuccess: () => setAmount("") },
+      { subcategory_id: sub.subcategory_id, txn_date: `${year}-${String(month).padStart(2, "0")}-01`, amount: Number(amount), note: note || null },
+      { onSuccess: () => { setAmount(""); setNote(""); } },
     );
   };
 
@@ -73,9 +74,12 @@ function TransactionDrawer({ year, month, section, sub, onClose }: TransactionDr
       </div>
 
       <div className="mt-5 text-[13px] font-extrabold">Add expense</div>
-      <form onSubmit={(e: FormEvent) => { e.preventDefault(); add(); }} className="mt-2.5 flex gap-2.5">
+      <form onSubmit={(e: FormEvent) => { e.preventDefault(); add(); }} className="mt-2.5 flex flex-col gap-2.5">
         <Input inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount ₹" className="num" />
-        <Button type="submit" disabled={!amount || create.isPending} className="px-6">Add</Button>
+        <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" />
+        <Button type="submit" disabled={!amount || create.isPending} className="w-full justify-center py-4 text-[15px] font-extrabold">
+          {create.isPending ? "Adding…" : `Add to ${MONTH_NAMES[month - 1]}`}
+        </Button>
       </form>
 
       {txns.length > 0 && (
