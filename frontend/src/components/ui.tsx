@@ -239,7 +239,7 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`w-full min-w-0 rounded-[var(--radiusXs)] border border-line px-3.5 py-3 text-sm font-semibold text-ink outline-none transition focus:border-[var(--accent)] ${props.className || ""}`}
+      className={`w-full min-w-0 rounded-[var(--radiusXs)] border border-line px-3.5 py-3 text-base font-semibold text-ink outline-none transition focus:border-[var(--accent)] ${props.className || ""}`}
       style={{ background: "var(--bg)", ...props.style }}
     />
   );
@@ -249,7 +249,7 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
       {...props}
-      className={`w-full min-w-0 rounded-[var(--radiusXs)] border border-line px-3.5 py-3 text-sm font-semibold text-ink outline-none transition focus:border-[var(--accent)] ${props.className || ""}`}
+      className={`w-full min-w-0 rounded-[var(--radiusXs)] border border-line px-3.5 py-3 text-base font-semibold text-ink outline-none transition focus:border-[var(--accent)] ${props.className || ""}`}
       style={{ background: "var(--bg)", ...props.style }}
     />
   );
