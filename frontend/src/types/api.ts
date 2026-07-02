@@ -488,6 +488,30 @@ export interface BalanceSnapshotCreate {
   note?: string | null;
 }
 
+// ---- Assets / net worth ----
+export interface AssetHolding {
+  id: number;
+  category: string;
+  name: string | null;
+  amount: number;
+  /** ISO "yyyy-MM-dd" — when this holding's value was last updated. */
+  as_of_date: string;
+}
+
+// as_of_date is stamped server-side (the day of the edit), so it's not sent.
+export interface AssetHoldingCreate {
+  category: string;
+  name?: string | null;
+  amount: number;
+}
+
+export interface AssetHoldingUpdate {
+  id: number;
+  category?: string;
+  name?: string | null;
+  amount?: number;
+}
+
 // ---- Dashboard ----
 export interface DashboardKpis {
   income: number;

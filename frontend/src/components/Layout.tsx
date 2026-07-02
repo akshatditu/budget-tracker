@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, CalendarDays, TableProperties, SlidersHorizontal,
-  Receipt, Wallet, Target, Scale, BookOpen, Settings as SettingsIcon, ChevronLeft, ChevronRight,
+  Receipt, Wallet, TrendingUp, Target, Scale, BookOpen, Settings as SettingsIcon, ChevronLeft, ChevronRight,
   X, LogOut, Moon, Sun, Plus, Home, BarChart3, MoreHorizontal, type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
@@ -29,6 +29,7 @@ const NAV: NavItem[] = [
   { to: "/dashboard/setup", label: "Budget Setup", icon: SlidersHorizontal, tour: "nav-setup" },
   { to: "/dashboard/transactions", label: "Transactions", icon: Receipt, tour: "nav-transactions" },
   { to: "/dashboard/income", label: "Income", icon: Wallet, tour: "nav-income" },
+  { to: "/dashboard/assets", label: "Net Worth", icon: TrendingUp },
   { to: "/dashboard/goals", label: "Goals", icon: Target },
   { to: "/dashboard/reconcile", label: "Reconcile", icon: Scale },
   { to: "/dashboard/guide", label: "Guide", icon: BookOpen },
@@ -120,6 +121,7 @@ const SCREEN_TITLES: Record<string, string> = {
   "/dashboard/setup": "Budget Setup",
   "/dashboard/transactions": "Transactions",
   "/dashboard/income": "Income",
+  "/dashboard/assets": "Net Worth",
   "/dashboard/goals": "Goals",
   "/dashboard/reconcile": "Reconcile",
   "/dashboard/guide": "Guide",
@@ -222,7 +224,7 @@ function BottomNav({ onMore, onAdd }: { onMore: () => void; onAdd: () => void })
       <button
         onClick={onMore}
         className="flex flex-1 flex-col items-center gap-[3px]"
-        style={{ color: ["/dashboard/setup", "/dashboard/income", "/dashboard/goals", "/dashboard/reconcile", "/dashboard/guide", "/dashboard/settings"].includes(pathname) ? "var(--accent)" : "var(--faint)" }}
+        style={{ color: ["/dashboard/setup", "/dashboard/income", "/dashboard/assets", "/dashboard/goals", "/dashboard/reconcile", "/dashboard/guide", "/dashboard/settings"].includes(pathname) ? "var(--accent)" : "var(--faint)" }}
       >
         <MoreHorizontal size={19} />
         <span className="text-[10px] font-bold">More</span>

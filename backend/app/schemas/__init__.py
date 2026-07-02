@@ -290,3 +290,26 @@ class BalanceSnapshotCreate(BaseModel):
     as_of_date: date
     actual_balance: float
     note: Optional[str] = None
+
+
+# ---- Assets / net worth ----
+# as_of_date is stamped server-side to "today" on every create/update, so the
+# client never sends it — the date always reflects the day the holding was edited.
+class AssetHoldingCreate(BaseModel):
+    category: str
+    name: Optional[str] = None
+    amount: float
+
+
+class AssetHoldingUpdate(BaseModel):
+    category: Optional[str] = None
+    name: Optional[str] = None
+    amount: Optional[float] = None
+
+
+class AssetHoldingOut(ORMModel):
+    id: int
+    category: str
+    name: Optional[str]
+    amount: float
+    as_of_date: date

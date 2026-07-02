@@ -307,3 +307,19 @@ class BudgetRevisionItem(Base):
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     draft: Mapped[BudgetRevisionDraft] = relationship(back_populates="items")
+
+
+class AssetHolding(Base):
+    """A manually-entered asset/investment holding for the net-worth view. Not tied to a
+    budget year — it's a current point-in-time picture. `as_of_date` records when the value
+    was last updated so stale figures are visible. `amount` is encrypted at rest like all money."""
+
+    __tablename__ = "asset_holdings"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    category: Mapped[str] = mapped_column(String(50))  # Stocks, MF, PPF, FD, Bank Balance, Cash, ...
+    name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    amount: Mapped[float] = mapped_column(MONEY)
+    as_of_date: Mapped[date] = mapped_column(Date, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

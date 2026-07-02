@@ -6,6 +6,9 @@ import type {
   AnnualBudgetSetResult,
   AnnualRevisedPatch,
   AnnualRevisedResult,
+  AssetHolding,
+  AssetHoldingCreate,
+  AssetHoldingUpdate,
   BalanceSnapshot,
   BalanceSnapshotCreate,
   BudgetRevisionDraft,
@@ -390,6 +393,30 @@ export const useReconciliationMutations = (year: number) => {
     }),
     remove: useMutation({
       mutationFn: (id: number) => api.delete<void>(`/years/${year}/reconciliations/${id}`),
+      onSuccess: done,
+    }),
+  };
+};
+
+// ---- assets / net worth ----
+// User-scoped (a current point-in-time picture spanning years), so no year in the key.
+export const useAssets = () =>
+  useQuery({ queryKey: ["assets"], queryFn: () => get<AssetHolding[]>("/assets") });
+
+export const useAssetMutations = () => {
+  const qc = useQueryClient();
+  const done = () => qc.invalidateQueries({ queryKey: ["assets"] });
+  return {
+    create: useMutation({
+      mutationFn: (b: AssetHoldingCreate) => api.post<AssetHolding>("/assets", b),
+      onSuccess: done,
+    }),
+    update: useMutation({
+      mutationFn: ({ id, ...b }: AssetHoldingUpdate) => api.patch<AssetHolding>(`/assets/${id}`, b),
+      onSuccess: done,
+    }),
+    remove: useMutation({
+      mutationFn: (id: number) => api.delete<void>(`/assets/${id}`),
       onSuccess: done,
     }),
   };

@@ -14,6 +14,7 @@ import AnnualRollup from "./pages/AnnualRollup";
 import BudgetSetup from "./pages/BudgetSetup";
 import Transactions from "./pages/Transactions";
 import Income from "./pages/Income";
+import NetWorth from "./pages/NetWorth";
 import Goals from "./pages/Goals";
 import Reconciliation from "./pages/Reconciliation";
 import Guide from "./pages/Guide";
@@ -22,7 +23,7 @@ import Settings from "./pages/Settings";
 // Mounted at /dashboard/*. First-run users build their sections before
 // entering the app; everyone else gets the full authenticated shell.
 function DashboardApp({ user }: { user: User }) {
-  if (!user.onboarded) return <Onboarding />;
+  if (!user.onboarded) return <ThemeProvider><Onboarding /></ThemeProvider>;
 
   return (
     <ThemeProvider>
@@ -35,6 +36,7 @@ function DashboardApp({ user }: { user: User }) {
           <Route path="/setup" element={<BudgetSetup />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/income" element={<Income />} />
+          <Route path="/assets" element={<NetWorth />} />
           <Route path="/goals" element={<Goals />} />
           <Route path="/reconcile" element={<Reconciliation />} />
           <Route path="/guide" element={<Guide />} />

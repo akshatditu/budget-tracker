@@ -8,6 +8,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.config import settings
 from app.routers import (
+    assets,
     auth,
     budgets,
     catalog,
@@ -54,6 +55,7 @@ app.include_router(transactions.router)
 app.include_router(incomes.router)
 app.include_router(goals.router)
 app.include_router(reconciliation.router)
+app.include_router(assets.router)
 app.include_router(views.router)
 
 
