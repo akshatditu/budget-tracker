@@ -17,6 +17,19 @@ export interface User {
   onboarded: boolean;
 }
 
+// ---- Lifestyle profile (optional "About your life" wizard step) ----
+export interface LifestyleProfile {
+  family_size?: number;
+  dependents?: number;
+  earners?: "single" | "dual";
+  city_tier?: "metro" | "tier2" | "tier3";
+  short_term_goals?: string;
+  long_term_goals?: string;
+  emergency_fund?: "none" | "building" | "three_to_six" | "six_plus";
+  other_loans?: "none" | "small" | "significant";
+  savings_level?: "just_starting" | "some_cushion" | "comfortable";
+}
+
 // ---- Onboarding ----
 export interface OnboardingSection {
   name: string;
@@ -34,6 +47,8 @@ export interface OnboardingPayload {
   employment_type?: "salaried" | "business";
   monthly_income?: number;
   fixed_bills?: FixedBill[];
+  /** Optional lifestyle profile; persisted server-side and reused by Build/Revise. */
+  profile?: LifestyleProfile;
 }
 
 export interface GenerateBudgetPayload extends OnboardingPayload {

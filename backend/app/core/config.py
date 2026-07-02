@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     # OpenAI key used to allocate the first-run budget. Blank is fine: onboarding
     # falls back to a deterministic rule-based split when this is unset or the call fails.
     openai_api_key: str = ""
+    # Model used for the initial "Build with AI" allocation (cheap, one-shot JSON).
+    openai_model_build: str = "gpt-5.4-nano"
+    # Model used for "Revise with AI" (needs stronger reasoning over spending history).
+    openai_model_revise: str = "gpt-5.4-mini"
 
     @property
     def cors_origin_list(self) -> list[str]:

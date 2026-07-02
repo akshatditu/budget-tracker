@@ -24,6 +24,7 @@ def build_budget(
     fixed_bills: list[dict],
     employment_type: str | None,
     monthly_income: float | None,
+    profile: dict | None = None,
     reset_revised: bool = False,
     from_month: int = 1,
 ) -> None:
@@ -77,10 +78,14 @@ def build_budget(
         monthly_income=income,
         fixed_total=fixed_total,
         discretionary=discretionary,
+        profile=profile,
     )
     if allocation is None:
         allocation = rule_based_allocation(
-            monthly_income=income, fixed_total=fixed_total, discretionary=discretionary
+            monthly_income=income,
+            fixed_total=fixed_total,
+            discretionary=discretionary,
+            profile=profile,
         )
     for name, amount in allocation.items():
         sub = sub_by_name.get(name.lower())

@@ -40,3 +40,16 @@ def test_no_disposable_income_zeroes_out():
 
 def test_empty_discretionary_returns_empty():
     assert rule_based_allocation(monthly_income=50000.0, fixed_total=0.0, discretionary=[]) == {}
+
+
+def test_dependents_shift_needs_weight():
+    income, fixed = 80000.0, 30000.0
+    base = rule_based_allocation(monthly_income=income, fixed_total=fixed, discretionary=DISCRETIONARY)
+    fam = rule_based_allocation(
+        monthly_income=income, fixed_total=fixed, discretionary=DISCRETIONARY,
+        profile={"dependents": 2},
+    )
+    # A household with dependents gets more for needs, less for wants; total still fits.
+    assert fam["Grocery"] > base["Grocery"]
+    assert fam["Dining Out"] < base["Dining Out"]
+    assert sum(fam.values()) <= (income - fixed) + 1.0

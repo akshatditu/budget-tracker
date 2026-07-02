@@ -10,7 +10,7 @@ from sqlalchemy.pool import StaticPool
 from app.core.database import Base, get_db
 from app.core.deps import get_current_user
 from app.main import app
-from app.models import AnnualBudget, Income, Subcategory, User
+from app.models import AnnualBudget, Income, Subcategory, User, UserProfile
 
 
 @pytest.fixture
@@ -81,3 +81,30 @@ def test_onboarding_rejects_second_run(client):
     assert first.status_code == 200
     second = tc.post("/api/onboarding", json={"sections": []})
     assert second.status_code == 409
+
+
+def test_onboarding_saves_profile(client):
+    tc, db, user = client
+    resp = tc.post(
+        "/api/onboarding",
+        json={
+            "sections": [],
+            "profile": {"family_size": 4, "dependents": 2, "city_tier": "metro"},
+        },
+    )
+    assert resp.status_code == 200
+    row = db.scalars(select(UserProfile)).first()
+    assert row is not None and row.user_id == user.id
+    assert (row.family_size, row.dependents, row.city_tier) == (4, 2, "metro")
+    # Unshared fields stay null ("prefer not to say").
+    assert row.emergency_fund is None
+    # The saved profile is readable so the wizard can pre-fill next time.
+    me = tc.get("/api/me/profile").json()
+    assert me["city_tier"] == "metro" and me["family_size"] == 4
+
+
+def test_onboarding_without_profile_creates_none(client):
+    tc, db, _user = client
+    assert tc.post("/api/onboarding", json={"sections": []}).status_code == 200
+    assert db.scalars(select(UserProfile)).first() is None
+    assert tc.get("/api/me/profile").json() is None

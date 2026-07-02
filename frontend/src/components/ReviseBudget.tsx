@@ -159,8 +159,9 @@ function AskPane({
       <Header title="Revise budget with AI" onClose={onClose} />
       <div className="flex-1 space-y-4 overflow-y-auto p-5">
         <p className="text-sm font-medium text-dim">
-          The AI studies your actual spending this year and reallocates your budget within your income —
-          fixed bills stay put. Tell it anything that's changed so the recommendation fits your life.
+          The AI studies your actual spending this year — plus your goals, income trend and life
+          profile — and reallocates your budget within your income; fixed bills stay put. Tell it
+          anything that's changed so the recommendation fits your life.
         </p>
         <div>
           <span className="mb-1.5 block text-[11.5px] font-bold text-dim">What's changed since your last budget?</span>

@@ -33,7 +33,7 @@ export default function Onboarding() {
       <div className="flex min-h-full items-center justify-center p-4 sm:p-6">
         <BudgetWizard
           sections={PRESETS}
-          initial={{ selected: emptySelected(PRESETS), employment: "salaried", income: "", bills: [] }}
+          initial={{ selected: emptySelected(PRESETS), employment: "salaried", income: "", bills: [], profile: {} }}
           welcome={welcome}
           submitLabel="Build my budget"
           onFinish={(p) => complete.mutate(p)}

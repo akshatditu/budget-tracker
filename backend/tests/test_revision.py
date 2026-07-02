@@ -12,8 +12,20 @@ from app.core.config import settings
 from app.core.database import Base, get_db
 from app.core.deps import get_current_user
 from app.main import app
-from app.models import BudgetYear, Category, Income, MonthlyBudget, Subcategory, Transaction, User
-from app.services.revise_budget import rule_based_revision
+from app.models import (
+    BudgetYear,
+    Category,
+    Goal,
+    GoalContribution,
+    Income,
+    MonthlyBudget,
+    MonthlySetting,
+    Subcategory,
+    Transaction,
+    User,
+    UserProfile,
+)
+from app.services.revise_budget import build_context, rule_based_revision
 from app.services.rollup import elapsed_months
 
 YEAR = 2026
@@ -88,12 +100,21 @@ def client(monkeypatch):
         for m in range(1, 13)
     ])
     # Real spending above budget in elapsed months so the fallback proposes a change.
+    # Notes give the context builder a "typical purchases" signal.
     db.add_all([
-        Transaction(user_id=user.id, budget_year_id=by.id, subcategory_id=grocery.id, txn_date=date(YEAR, m, 15), amount=1500)
+        Transaction(user_id=user.id, budget_year_id=by.id, subcategory_id=grocery.id, txn_date=date(YEAR, m, 15), amount=1500, note="bigbasket")
         for m in range(1, elapsed_months(YEAR) + 1)
     ])
     # Income gives the discretionary envelope headroom (no Bills section here).
     db.add(Income(user_id=user.id, budget_year_id=by.id, month=6, source="Salary", amount=5000))
+    # Extra context the AI revision now reads: month notes, a goal with progress,
+    # and a lifestyle profile.
+    db.add(MonthlySetting(budget_year_id=by.id, month=3, notes="festival month"))
+    goal = Goal(user_id=user.id, name="Goa trip", target_amount=50000, target_date=date(YEAR, 12, 31))
+    db.add(goal)
+    db.flush()
+    db.add(GoalContribution(user_id=user.id, goal_id=goal.id, amount=20000, contrib_date=date(YEAR, 2, 1)))
+    db.add(UserProfile(user_id=user.id, dependents=2, city_tier="metro"))
     db.commit()
 
     app.dependency_overrides[get_db] = lambda: (yield db)
@@ -158,3 +179,49 @@ def test_discard_leaves_budget_unchanged(client):
     assert all(_revised(db, grocery_id, m) == 1000 for m in range(1, 13))
     # A fresh revision can be generated again.
     assert tc.post(f"/api/years/{YEAR}/budget-revision", json={}).status_code == 200
+
+
+# --------------------------------------------------------------------------- #
+# build_context: the enriched advisor view
+# --------------------------------------------------------------------------- #
+def test_build_context_includes_history_goals_notes_profile(client):
+    _tc, db, grocery_id = client
+    user = db.scalars(select(User)).first()
+    by = db.scalars(select(BudgetYear)).first()
+    elapsed = elapsed_months(YEAR)
+
+    ctx = build_context(db, by, user)
+
+    # Month-by-month income for every elapsed month, zero-filled.
+    assert [h["month"] for h in ctx["income_history"]] == list(range(1, elapsed + 1))
+    assert any(h["income"] == 5000 for h in ctx["income_history"])
+
+    # Per-item recent spend is capped at 3 months; the fixture spends 1500/mo.
+    item = next(it for it in ctx["items"] if it["subcategory_id"] == grocery_id)
+    assert 1 <= len(item["recent_monthly_spend"]) <= 3
+    assert all(v == 1500 for v in item["recent_monthly_spend"])
+    # The repeated transaction note surfaces as a typical-purchase signal.
+    assert "bigbasket" in item["top_notes"]
+
+    # Goal progress, month notes and profile are present.
+    goa = next(g for g in ctx["goals"] if g["name"] == "Goa trip")
+    assert goa["target_amount"] == 50000 and goa["saved"] == 20000
+    assert {"month": 3, "note": "festival month"} in ctx["month_notes"]
+    assert ctx["profile"]["dependents"] == 2 and ctx["profile"]["city_tier"] == "metro"
+    # No drafts generated yet — no history.
+    assert ctx["past_revisions"] == []
+
+
+def test_discard_keeps_history(client):
+    tc, db, _grocery_id = client
+    user = db.scalars(select(User)).first()
+    by = db.scalars(select(BudgetYear)).first()
+
+    assert tc.post(f"/api/years/{YEAR}/budget-revision", json={"user_note": "cut wants"}).status_code == 200
+    assert tc.delete(f"/api/years/{YEAR}/budget-revision").status_code == 204
+
+    # The discarded draft is retained and becomes learnable history for the next run.
+    ctx = build_context(db, by, user)
+    assert len(ctx["past_revisions"]) == 1
+    assert ctx["past_revisions"][0]["status"] == "discarded"
+    assert ctx["past_revisions"][0]["user_note"] == "cut wants"

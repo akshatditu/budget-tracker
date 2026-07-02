@@ -23,6 +23,7 @@ import type {
   Income,
   IncomeCreate,
   IncomeUpdate,
+  LifestyleProfile,
   MonthlyBudgetPatch,
   MonthlyBudgetResult,
   MonthlySettingPatch,
@@ -60,6 +61,13 @@ export const useUpdateMe = () => {
   });
 };
 
+// ---- lifestyle profile (saved by the wizard's "About your life" step) ----
+export const useProfile = () =>
+  useQuery({
+    queryKey: ["profile"],
+    queryFn: () => get<LifestyleProfile | null>("/me/profile"),
+  });
+
 // ---- onboarding ----
 export const useCompleteOnboarding = () => {
   const qc = useQueryClient();
@@ -68,7 +76,7 @@ export const useCompleteOnboarding = () => {
     onSuccess: () => {
       // Refetch auth (flips `onboarded` true) and the freshly-created catalog.
       qc.invalidateQueries({ queryKey: ["auth", "me"] });
-      ["categories", "subcategories"].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
+      ["categories", "subcategories", "profile"].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
     },
   });
 };
@@ -139,6 +147,7 @@ export const useRegenerateBudget = (year: number) => {
     onSuccess: () => {
       invalidateAll(qc, year); // categories, subcategories, year, month/rollup/dashboard
       ["annual-budget", "incomes"].forEach((k) => qc.invalidateQueries({ queryKey: [k, year] }));
+      qc.invalidateQueries({ queryKey: ["profile"] });
     },
   });
 };

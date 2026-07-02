@@ -1,9 +1,10 @@
 """First-run budget allocation. Given monthly income, already-committed fixed bills,
 and the discretionary buckets the user picked, produce a monthly amount per bucket.
 
-`generate_allocation` asks OpenAI (gpt-4o-mini, Structured Outputs) to act as a finance
-expert. It never raises — on a missing key, network error, or bad response it returns
-None so the caller can fall back to `rule_based_allocation`, a deterministic split.
+`generate_allocation` asks OpenAI (settings.openai_model_build, Structured Outputs) to
+act as a finance expert. It never raises — on a missing key, network error, or bad
+response it returns None so the caller can fall back to `rule_based_allocation`, a
+deterministic split.
 """
 from __future__ import annotations
 
@@ -13,11 +14,11 @@ import logging
 import httpx
 
 from app.core.config import settings
+from app.services.profile_context import profile_prompt_block
 
 log = logging.getLogger(__name__)
 
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
-MODEL = "gpt-4o-mini"
 
 SYSTEM_PROMPT = (
     "You are a prudent personal-finance expert helping someone set up a monthly budget. "
@@ -28,7 +29,13 @@ SYSTEM_PROMPT = (
     "Investments are savings the person keeps, not spending — fund them meaningfully (aim "
     "for roughly 15-25% of income when possible). Keep needs ahead of wants. The amounts you "
     "return should not exceed the remaining income. Return only the requested JSON object: a "
-    "number (in the user's currency, no symbols) for every bucket name."
+    "number (in the user's currency, no symbols) for every bucket name. "
+    "You may also get a short profile of their life — household size and dependents, "
+    "single/dual income, city cost-of-living tier, goals, emergency-fund and debt situation. "
+    "Let it shape the split: more dependents or a high-cost city means more for everyday "
+    "needs; no emergency fund or significant loans means prioritise the emergency/investment "
+    "buckets before wants; a near-term goal means fund the bucket that matches it. If no "
+    "profile is given, use sensible defaults."
 )
 
 
@@ -49,10 +56,12 @@ def generate_allocation(
     monthly_income: float,
     fixed_total: float,
     discretionary: list[dict],
+    profile: dict | None = None,
 ) -> dict[str, float] | None:
     """Return ``{bucket_name: monthly_amount}`` for the discretionary buckets, or None
     to signal the caller should fall back. ``discretionary`` items are
-    ``{"name", "kind", "section"}``."""
+    ``{"name", "kind", "section"}``. ``profile`` is the optional lifestyle profile
+    dict from profile_context.profile_dict."""
     if not discretionary:
         return {}
     if not settings.openai_api_key or not monthly_income or monthly_income <= 0:
@@ -70,10 +79,12 @@ def generate_allocation(
         "Allocate the remaining income across these buckets (return a monthly amount for each):\n"
         + "\n".join(buckets)
     )
+    profile_block = profile_prompt_block(profile)
+    if profile_block:
+        user_prompt += "\n\n" + profile_block
 
     body = {
-        "model": MODEL,
-        "temperature": 0.2,
+        "model": settings.openai_model_build,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
@@ -113,20 +124,29 @@ def generate_allocation(
 
 
 def rule_based_allocation(
-    *, monthly_income: float, fixed_total: float, discretionary: list[dict]
+    *,
+    monthly_income: float,
+    fixed_total: float,
+    discretionary: list[dict],
+    profile: dict | None = None,
 ) -> dict[str, float]:
     """Deterministic fallback: spread the income remaining after fixed bills across the
     discretionary buckets by section weight (needs-like 0.5, wants 0.3, investments 0.2),
     renormalised over the sections actually present, then split evenly within each section.
-    Total never exceeds the remaining income."""
+    A household with dependents (or 3+ people) nudges needs up to 0.55 / wants down to
+    0.25. Total never exceeds the remaining income."""
     if not discretionary:
         return {}
     disposable = max((monthly_income or 0.0) - fixed_total, 0.0)
 
+    p = profile or {}
+    has_family = (p.get("dependents") or 0) >= 1 or (p.get("family_size") or 0) >= 3
+    needs_weight, wants_weight = (0.55, 0.25) if has_family else (0.5, 0.3)
+
     def base_weight(item: dict) -> float:
         if item["kind"] == "investment":
             return 0.2
-        return 0.3 if item["section"].strip().lower() == "wants" else 0.5
+        return wants_weight if item["section"].strip().lower() == "wants" else needs_weight
 
     # Group items per section, remembering that section's base weight.
     groups: dict[str, list[str]] = {}

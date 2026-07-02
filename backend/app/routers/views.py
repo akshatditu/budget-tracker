@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_year_or_404
-from app.models import MonthlySetting, User
-from app.schemas import MonthlySettingPatch, UserOut, UserUpdate
+from app.models import MonthlySetting, User, UserProfile
+from app.schemas import LifestyleProfileOut, MonthlySettingPatch, UserOut, UserUpdate
 from app.services import rollup
 from app.services.carryforward import carry_forward_chain, liquid_balance_series
 
@@ -26,6 +26,13 @@ def update_me(payload: UserUpdate, db: Session = Depends(get_db), user: User = D
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.get("/me/profile", response_model=LifestyleProfileOut | None)
+def get_my_profile(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """The saved lifestyle profile, or null if the user hasn't shared one.
+    Written only via the onboarding / generate-budget wizard payloads."""
+    return db.scalars(select(UserProfile).where(UserProfile.user_id == user.id)).first()
 
 
 # ---- month view ----

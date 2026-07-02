@@ -46,6 +46,39 @@ class User(Base):
         return self.onboarded_at is not None
 
 
+class UserProfile(Base):
+    """Optional lifestyle profile collected by the wizard's "About your life" step.
+
+    One row per user; every field is nullable ("prefer not to say"). Reused by both
+    the Build allocation and the Revise context so the user is never re-asked.
+    Debt/savings are deliberately coarse buckets — no exact money values are stored
+    here, which is why these columns are plaintext rather than EncryptedNumeric.
+    """
+
+    __tablename__ = "user_profiles"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    # Household & dependents
+    family_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    dependents: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    earners: Mapped[str | None] = mapped_column(String(10), nullable=True)  # single | dual
+    # Cost of living
+    city_tier: Mapped[str | None] = mapped_column(String(10), nullable=True)  # metro | tier2 | tier3
+    # Goals & horizon — short free text; may mention rough amounts/dates.
+    short_term_goals: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    long_term_goals: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Debt & savings picture — coarse buckets by design.
+    emergency_fund: Mapped[str | None] = mapped_column(String(20), nullable=True)  # none|building|three_to_six|six_plus
+    other_loans: Mapped[str | None] = mapped_column(String(20), nullable=True)  # none|small|significant
+    savings_level: Mapped[str | None] = mapped_column(String(20), nullable=True)  # just_starting|some_cushion|comfortable
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class BudgetYear(Base):
     __tablename__ = "budget_years"
     __table_args__ = (UniqueConstraint("user_id", "year", name="uq_year_per_user"),)

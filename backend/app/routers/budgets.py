@@ -8,6 +8,7 @@ from app.models import AnnualBudget, MonthlyBudget, Subcategory, User
 from app.schemas import AnnualBudgetSet, AnnualRevisedPatch, GenerateBudgetPayload, MonthlyBudgetPatch
 from app.services.budget_apply import apply_annual_budget
 from app.services.budget_build import build_budget
+from app.services.profile_context import profile_dict, upsert_profile
 from app.services.rollup import elapsed_months, f
 
 router = APIRouter(prefix="/api/years/{year}", tags=["budgets"])
@@ -45,6 +46,10 @@ def generate_budget(
     ]
     fixed_bills = [{"name": b.name.strip(), "amount": b.amount} for b in payload.fixed_bills if b.name.strip()]
 
+    # Persist the optional lifestyle profile, then feed whatever is stored to the AI.
+    if payload.profile is not None:
+        upsert_profile(db, user, payload.profile)
+
     # "replace" rewrites every month; "forward" only the current + future months.
     from_month = 1 if payload.override_mode == "replace" else elapsed_months(year)
     build_budget(
@@ -55,6 +60,7 @@ def generate_budget(
         fixed_bills=fixed_bills,
         employment_type=payload.employment_type,
         monthly_income=payload.monthly_income,
+        profile=profile_dict(db, user),
         reset_revised=True,
         from_month=from_month,
     )

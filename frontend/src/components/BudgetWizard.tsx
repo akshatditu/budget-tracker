@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { ArrowLeft, ArrowRight, Check, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { Button, Input } from "./ui";
-import type { CategoryKind, FixedBill, OnboardingSection } from "../types/api";
+import type { CategoryKind, FixedBill, LifestyleProfile, OnboardingSection } from "../types/api";
 
 export interface PresetSection {
   name: string;
@@ -18,6 +18,7 @@ export interface WizardInitial {
   employment: "salaried" | "business";
   income: string;
   bills: FixedBill[];
+  profile: LifestyleProfile;
 }
 
 export interface WizardPayload {
@@ -25,6 +26,7 @@ export interface WizardPayload {
   employment_type: "salaried" | "business";
   monthly_income?: number;
   fixed_bills: FixedBill[];
+  profile: LifestyleProfile;
   override_mode?: OverrideMode;
 }
 
@@ -76,7 +78,19 @@ export function emptySelected(sections: PresetSection[]): Record<string, string[
   return Object.fromEntries(sections.map((p) => [p.name, [] as string[]]));
 }
 
-type Step = { kind: "welcome" } | { kind: "income" } | { kind: "bills" } | { kind: "section"; idx: number };
+type Step =
+  | { kind: "welcome" }
+  | { kind: "income" }
+  | { kind: "bills" }
+  | { kind: "life" }
+  | { kind: "section"; idx: number };
+
+// Chip options for the optional "About your life" step. Everything is skippable;
+// an unset field simply isn't sent (server treats it as "prefer not to say").
+const CITY_TIERS = [["metro", "Metro"], ["tier2", "Tier-2 city"], ["tier3", "Smaller city/town"]] as const;
+const EMERGENCY_FUNDS = [["none", "None yet"], ["building", "Building it"], ["three_to_six", "3–6 months"], ["six_plus", "6+ months"]] as const;
+const OTHER_LOANS = [["none", "None"], ["small", "Small"], ["significant", "Significant"]] as const;
+const SAVINGS_LEVELS = [["just_starting", "Just starting"], ["some_cushion", "Some cushion"], ["comfortable", "Comfortable"]] as const;
 
 interface BudgetWizardProps {
   sections: PresetSection[];
@@ -97,6 +111,7 @@ export default function BudgetWizard({
     ...(welcome ? [{ kind: "welcome" } as Step] : []),
     { kind: "income" },
     { kind: "bills" },
+    { kind: "life" },
     ...sections.map((_, idx): Step => ({ kind: "section", idx })),
   ];
 
@@ -108,6 +123,7 @@ export default function BudgetWizard({
   const [billAmount, setBillAmount] = useState("");
   const [selected, setSelected] = useState<Record<string, string[]>>(initial.selected);
   const [custom, setCustom] = useState("");
+  const [profile, setProfile] = useState<LifestyleProfile>(initial.profile);
   const [overrideMode, setOverrideMode] = useState<OverrideMode>("forward");
 
   const [lineIdx, setLineIdx] = useState(0);
@@ -147,6 +163,10 @@ export default function BudgetWizard({
   const next = () => { setCustom(""); setStepIdx((s) => s + 1); };
   const back = () => { setCustom(""); setStepIdx((s) => s - 1); };
 
+  // Toggle-style setter for chip fields: tapping the active chip deselects it.
+  const toggleProfileField = <K extends keyof LifestyleProfile>(key: K, value: LifestyleProfile[K]) =>
+    setProfile((p) => ({ ...p, [key]: p[key] === value ? undefined : value }));
+
   const finish = () => {
     const billNames = new Set(bills.map((b) => b.name.toLowerCase()));
     const outSections: OnboardingSection[] = sections.map((p) => ({
@@ -155,11 +175,16 @@ export default function BudgetWizard({
       items: (selected[p.name] ?? []).filter((i) => !billNames.has(i.toLowerCase())),
     }));
     const monthly_income = parseFloat(income);
+    // Drop unset/blank profile fields — omitted means "prefer not to say".
+    const cleanProfile = Object.fromEntries(
+      Object.entries(profile).filter(([, v]) => v !== undefined && v !== null && v !== "")
+    ) as LifestyleProfile;
     onFinish({
       sections: outSections,
       employment_type: employment,
       monthly_income: monthly_income > 0 ? monthly_income : undefined,
       fixed_bills: bills,
+      profile: cleanProfile,
       ...(showOverride ? { override_mode: overrideMode } : {}),
     });
   };
@@ -268,6 +293,90 @@ export default function BudgetWizard({
           <div className="mt-6 flex items-center justify-between">
             <Button variant="ghost" onClick={back}><ArrowLeft size={16} /> Back</Button>
             <Button onClick={next}>Next <ArrowRight size={16} /></Button>
+          </div>
+        </div>
+      ) : step?.kind === "life" ? (
+        <div>
+          <div className="flex items-center gap-2">
+            <Sparkles size={14} className="text-brand" />
+            <h2 className="text-lg font-semibold">About your life</h2>
+          </div>
+          <p className="mt-1 text-sm text-muted">
+            Optional — helps the AI fit the budget to your situation. Skip anything you'd rather not say.
+          </p>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div>
+              <span className="mb-1 block text-xs font-medium text-muted">Household size</span>
+              <Input
+                type="number" inputMode="numeric" min={1} max={20} placeholder="e.g. 4"
+                value={profile.family_size ?? ""}
+                onChange={(e) => setProfile((p) => ({ ...p, family_size: e.target.value ? Math.max(1, parseInt(e.target.value)) : undefined }))}
+              />
+            </div>
+            <div>
+              <span className="mb-1 block text-xs font-medium text-muted">Dependents</span>
+              <Input
+                type="number" inputMode="numeric" min={0} max={20} placeholder="e.g. 2"
+                value={profile.dependents ?? ""}
+                onChange={(e) => setProfile((p) => ({ ...p, dependents: e.target.value ? Math.max(0, parseInt(e.target.value)) : undefined }))}
+              />
+            </div>
+          </div>
+
+          {([
+            ["Earners in the household", "earners", [["single", "Single income"], ["dual", "Dual income"]] as const],
+            ["Where you live", "city_tier", CITY_TIERS],
+            ["Emergency fund", "emergency_fund", EMERGENCY_FUNDS],
+            ["Other loans (beyond your EMIs)", "other_loans", OTHER_LOANS],
+            ["Overall savings", "savings_level", SAVINGS_LEVELS],
+          ] as const).map(([label, key, options]) => (
+            <div key={key} className="mt-4">
+              <span className="mb-1 block text-xs font-medium text-muted">{label}</span>
+              <div className="flex flex-wrap gap-2">
+                {options.map(([val, text]) => {
+                  const on = profile[key] === val;
+                  return (
+                    <button
+                      key={val}
+                      onClick={() => toggleProfileField(key, val)}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                        on ? "border-brand bg-indigo-50 text-brand" : "border-line text-muted hover:bg-canvas hover:text-ink"
+                      }`}
+                    >
+                      {on && <Check size={14} />}{text}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          <div className="mt-4">
+            <span className="mb-1 block text-xs font-medium text-muted">Short-term goals (next 1–2 years)</span>
+            <Input
+              placeholder="e.g. Goa trip in Dec (~1.2L), new phone"
+              maxLength={500}
+              value={profile.short_term_goals ?? ""}
+              onChange={(e) => setProfile((p) => ({ ...p, short_term_goals: e.target.value || undefined }))}
+            />
+          </div>
+          <div className="mt-3">
+            <span className="mb-1 block text-xs font-medium text-muted">Long-term goals</span>
+            <Input
+              placeholder="e.g. house down payment in ~5 years"
+              maxLength={500}
+              value={profile.long_term_goals ?? ""}
+              onChange={(e) => setProfile((p) => ({ ...p, long_term_goals: e.target.value || undefined }))}
+            />
+          </div>
+
+          <div className="mt-6 flex items-center justify-between">
+            <Button variant="ghost" onClick={back}><ArrowLeft size={16} /> Back</Button>
+            <span className="flex items-center gap-2">
+              <Button variant="ghost" onClick={next}>Skip</Button>
+              <Button onClick={next}>Next <ArrowRight size={16} /></Button>
+            </span>
           </div>
         </div>
       ) : section ? (

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Sparkles, ChevronRight } from "lucide-react";
 import { useApp } from "../lib/AppContext";
-import { useAnnualBudget, useCategories, useSubcategories, useIncomes, useRegenerateBudget } from "../api/hooks";
+import { useAnnualBudget, useCategories, useSubcategories, useIncomes, useProfile, useRegenerateBudget } from "../api/hooks";
 import { sectionColor } from "../lib/format";
 import { Button } from "./ui";
 import BudgetWizard, { PRESETS, type PresetSection, type WizardInitial } from "./BudgetWizard";
@@ -17,6 +17,7 @@ export default function RegenerateBudget({ className = "", banner = false }: { c
   const { data: subs = [] } = useSubcategories();
   const { data: budget = [] } = useAnnualBudget(year);
   const { data: incomes = [] } = useIncomes(year, new Date().getMonth() + 1);
+  const { data: savedProfile } = useProfile();
   const regen = useRegenerateBudget(year);
 
   // Build wizard sections from the user's real catalog, pre-selecting their existing items.
@@ -47,8 +48,10 @@ export default function RegenerateBudget({ className = "", banner = false }: { c
       : [];
     const income = incomes[0]?.amount ? String(Math.round(incomes[0].amount)) : "";
     const employment = (incomes[0]?.source === "Business" ? "business" : "salaried") as "salaried" | "business";
-    return { sections, initial: { selected, employment, income, bills } as WizardInitial };
-  }, [categories, subs, budget, incomes]);
+    // Pre-fill the "About your life" step from the saved profile so Skip re-sends
+    // the saved values instead of blanking them.
+    return { sections, initial: { selected, employment, income, bills, profile: savedProfile ?? {} } as WizardInitial };
+  }, [categories, subs, budget, incomes, savedProfile]);
 
   return (
     <>

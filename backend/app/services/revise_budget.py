@@ -13,21 +13,34 @@ caller can fall back to ``rule_based_revision``, a deterministic nudge.
 """
 from __future__ import annotations
 
+import calendar
 import json
 import logging
 
 import httpx
+from sqlalchemy import select
 
 from app.core.config import settings
-from app.models import BudgetYear, User
+from app.models import BudgetRevisionDraft, BudgetYear, MonthlySetting, Transaction, User
 from app.services.carryforward import carry_forward_chain
-from app.services.rollup import annual_rollup, elapsed_months, income_by_month
+from app.services.goals import goal_progress_summaries
+from app.services.profile_context import profile_dict, profile_prompt_block
+from app.services.rollup import _spent_by_subcat_month, annual_rollup, elapsed_months, income_by_month
 
 log = logging.getLogger(__name__)
 
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
-MODEL = "gpt-4o"  # stronger reasoning than -mini: better at respecting the income envelope
 BILLS_SECTION = "bills"
+
+# Caps on the extra context so the prompt stays compact even for busy ledgers.
+RECENT_SPEND_MONTHS = 3
+TOP_NOTES_PER_ITEM = 3
+NOTE_MAX_CHARS = 40
+MONTH_NOTES_MAX = 6
+MONTH_NOTE_MAX_CHARS = 150
+PAST_REVISIONS_MAX = 3
+PAST_NOTE_MAX_CHARS = 200
+GOALS_MAX = 5
 
 SYSTEM_PROMPT = (
     "You are a thoughtful personal-finance advisor revising someone's existing monthly budget. "
@@ -44,7 +57,12 @@ SYSTEM_PROMPT = (
     "bucket is already well managed, keep it exactly the same.\n"
     "4. Move money toward buckets the user consistently overspends and away from ones they rarely "
     "use; surplus can go to savings/investments or wherever the user's note points.\n"
-    "5. Investments are retained wealth, not spending — fund them at least as well as today.\n\n"
+    "5. Investments are retained wealth, not spending — fund them at least as well as today.\n"
+    "6. Savings goals are commitments: when a goal is behind schedule, prefer moving spare money "
+    "toward the buckets that fund it; never cut a bucket so far that an on-track goal goes off track.\n"
+    "7. Ground yourself in the evidence you're given — the income trend (tighten if income is "
+    "falling), the last-3-month spend pattern and typical purchase notes, their life profile, and "
+    "their past revisions. Do not re-propose the kind of change they previously discarded.\n\n"
     "For every bucket give a one-sentence reason grounded in their numbers (say 'no change' when you "
     "keep it). Finally write 2-5 short, personalised insights explaining the overall reasoning. "
     "Return only the requested JSON."
@@ -89,6 +107,27 @@ def build_context(db, by: BudgetYear, user: User) -> dict:
     # Representative monthly income: the largest month's income (robust to partially-filled months).
     monthly_income = round(max(incomes.values(), default=0.0), 2)
 
+    # Per-item recent behaviour: spend in the last few elapsed months, and the most
+    # frequent transaction notes (a cheap signal of what the bucket is really used for).
+    spent_by_month = _spent_by_subcat_month(db, by.id)
+    recent_months = list(range(max(1, elapsed - RECENT_SPEND_MONTHS + 1), elapsed + 1)) if elapsed else []
+    note_counts: dict[int, dict[str, list]] = {}
+    for sid, note in db.execute(
+        select(Transaction.subcategory_id, Transaction.note).where(
+            Transaction.budget_year_id == by.id, Transaction.note.is_not(None)
+        )
+    ).all():
+        text = (note or "").strip()
+        if not text:
+            continue
+        bucket = note_counts.setdefault(int(sid), {})
+        entry = bucket.setdefault(text.casefold(), [0, text[:NOTE_MAX_CHARS]])
+        entry[0] += 1
+    top_notes_by_sid = {
+        sid: [t for _, t in sorted(bucket.values(), key=lambda v: -v[0])[:TOP_NOTES_PER_ITEM]]
+        for sid, bucket in note_counts.items()
+    }
+
     items = []
     bills_total_monthly = 0.0
     for sec in roll["sections"]:
@@ -99,9 +138,10 @@ def build_context(db, by: BudgetYear, user: User) -> dict:
                 bills_total_monthly += monthly
                 continue  # fixed commitment — not open to AI revision
             spent = it["spent"]
+            sid = it["subcategory_id"]
             items.append(
                 {
-                    "subcategory_id": it["subcategory_id"],
+                    "subcategory_id": sid,
                     "name": it["name"],
                     "section": sec["name"],
                     "kind": sec["kind"],
@@ -111,6 +151,10 @@ def build_context(db, by: BudgetYear, user: User) -> dict:
                     "avg_monthly_spent": round(spent / elapsed, 2) if elapsed else 0.0,
                     "set_aside": it["set_aside"],
                     "overspent": it["overspent"],
+                    "recent_monthly_spend": [
+                        round(spent_by_month.get((sid, m), 0.0), 2) for m in recent_months
+                    ],
+                    "top_notes": top_notes_by_sid.get(sid, []),
                 }
             )
 
@@ -129,6 +173,44 @@ def build_context(db, by: BudgetYear, user: User) -> dict:
         {"month": r["month_name"], "net": round(r["net"], 2), "carry_out": round(r["carry_out"], 2)}
         for r in chain[:elapsed]
     ]
+
+    # Month-by-month income for elapsed months (the envelope still uses the max above,
+    # but the model sees the real trend — matters for business/variable income).
+    income_history = [
+        {"month": m, "income": round(incomes.get(m, 0.0), 2)} for m in range(1, elapsed + 1)
+    ]
+
+    # Non-empty monthly notes ("festival month", "car service") from elapsed months.
+    month_notes = [
+        {"month": ms.month, "note": ms.notes.strip()[:MONTH_NOTE_MAX_CHARS]}
+        for ms in db.scalars(
+            select(MonthlySetting)
+            .where(MonthlySetting.budget_year_id == by.id, MonthlySetting.month <= elapsed)
+            .order_by(MonthlySetting.month)
+        ).all()
+        if ms.notes and ms.notes.strip()
+    ][-MONTH_NOTES_MAX:]
+
+    # Previously accepted/discarded drafts for this year, so the model can avoid
+    # re-proposing what the user already rejected.
+    past_revisions = [
+        {
+            "when": d.created_at.date().isoformat() if d.created_at else None,
+            "status": d.status,
+            "user_note": (d.user_note or "").strip()[:PAST_NOTE_MAX_CHARS] or None,
+        }
+        for d in db.scalars(
+            select(BudgetRevisionDraft)
+            .where(
+                BudgetRevisionDraft.user_id == user.id,
+                BudgetRevisionDraft.budget_year_id == by.id,
+                BudgetRevisionDraft.status != "pending",
+            )
+            .order_by(BudgetRevisionDraft.created_at.desc())
+            .limit(PAST_REVISIONS_MAX)
+        ).all()
+    ]
+
     return {
         "currency": user.currency,
         "elapsed_months": elapsed,
@@ -140,6 +222,11 @@ def build_context(db, by: BudgetYear, user: User) -> dict:
         "totals": roll["totals"],
         "items": items,
         "savings_trend": savings_trend,
+        "income_history": income_history,
+        "goals": goal_progress_summaries(db, user, limit=GOALS_MAX),
+        "month_notes": month_notes,
+        "past_revisions": past_revisions,
+        "profile": profile_dict(db, user),
     }
 
 
@@ -193,12 +280,63 @@ def generate_revision(
         return None
 
     ids = [it["subcategory_id"] for it in items]
-    lines = [
-        f'- #{it["subcategory_id"]} "{it["name"]}" ({it["section"]}, {it["kind"]}): '
-        f'current monthly {it["current_monthly"]}, YTD spent {it["ytd_spent"]}, '
-        f'avg/month {it["avg_monthly_spent"]}, set-aside {it["set_aside"]}, overspent {it["overspent"]}'
-        for it in items
-    ]
+
+    def _item_line(it: dict) -> str:
+        line = (
+            f'- #{it["subcategory_id"]} "{it["name"]}" ({it["section"]}, {it["kind"]}): '
+            f'current monthly {it["current_monthly"]}, YTD spent {it["ytd_spent"]}, '
+            f'avg/month {it["avg_monthly_spent"]}, set-aside {it["set_aside"]}, overspent {it["overspent"]}'
+        )
+        if it.get("recent_monthly_spend"):
+            line += f'; last {len(it["recent_monthly_spend"])} months {it["recent_monthly_spend"]}'
+        if it.get("top_notes"):
+            line += "; typical notes: " + ", ".join(f'"{n}"' for n in it["top_notes"])
+        return line
+
+    lines = [_item_line(it) for it in items]
+
+    extra_blocks: list[str] = []
+    if context.get("income_history"):
+        extra_blocks.append(
+            "Income by month this year: "
+            + ", ".join(
+                f"{calendar.month_abbr[h['month']]}: {h['income']}"
+                for h in context["income_history"]
+            )
+        )
+    if context.get("goals"):
+        goal_lines = []
+        for g in context["goals"]:
+            bits = f'- "{g["name"]}": target {g["target_amount"]}'
+            if g["target_date"]:
+                bits += f' by {g["target_date"]}'
+            bits += f', saved {g["saved"]}'
+            if g["monthly_required"] is not None:
+                bits += f', needs ~{g["monthly_required"]}/mo'
+            if g["on_track"] is not None:
+                bits += ", on track" if g["on_track"] else ", behind schedule"
+            goal_lines.append(bits)
+        extra_blocks.append("Savings goals:\n" + "\n".join(goal_lines))
+    if context.get("month_notes"):
+        extra_blocks.append(
+            "Their monthly notes: "
+            + "; ".join(
+                f'{calendar.month_abbr[n["month"]]}: "{n["note"]}"' for n in context["month_notes"]
+            )
+        )
+    if context.get("past_revisions"):
+        extra_blocks.append(
+            "Past AI revisions: "
+            + "; ".join(
+                f'{r["when"]} {r["status"]}'
+                + (f' (their note: "{r["user_note"]}")' if r["user_note"] else "")
+                for r in context["past_revisions"]
+            )
+        )
+    profile_block = profile_prompt_block(context.get("profile"))
+    if profile_block:
+        extra_blocks.append(profile_block)
+
     user_prompt = (
         f"Currency: {currency}\n"
         f"Months elapsed this year: {context['elapsed_months']}\n"
@@ -209,13 +347,13 @@ def generate_revision(
         f"What's changed (user's words): {user_note.strip() if user_note and user_note.strip() else 'Nothing specified.'}\n\n"
         "Discretionary buckets and how they've actually been used:\n"
         + "\n".join(lines)
+        + ("\n\n" + "\n\n".join(extra_blocks) if extra_blocks else "")
         + "\n\nReturn a new monthly amount and a one-sentence reason for EVERY bucket id above "
         f"(keep the total at or below {context['envelope_monthly']}), plus 2-5 overall insights."
     )
 
     body = {
-        "model": MODEL,
-        "temperature": 0.2,
+        "model": settings.openai_model_revise,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},

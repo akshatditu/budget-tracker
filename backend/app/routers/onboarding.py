@@ -12,6 +12,7 @@ from app.core.deps import get_current_user
 from app.models import BudgetYear, User
 from app.schemas import OnboardingPayload, UserOut
 from app.services.budget_build import build_budget
+from app.services.profile_context import profile_dict, upsert_profile
 
 router = APIRouter(prefix="/api", tags=["onboarding"])
 
@@ -42,6 +43,10 @@ def complete_onboarding(
         db.add(by)
     db.flush()
 
+    # Persist the optional lifestyle profile, then feed whatever is stored to the AI.
+    if payload.profile is not None:
+        upsert_profile(db, user, payload.profile)
+
     build_budget(
         db,
         user,
@@ -50,6 +55,7 @@ def complete_onboarding(
         fixed_bills=fixed_bills,
         employment_type=payload.employment_type,
         monthly_income=payload.monthly_income,
+        profile=profile_dict(db, user),
     )
 
     user.onboarded_at = datetime.now(timezone.utc)

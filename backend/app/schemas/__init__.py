@@ -21,6 +21,23 @@ class UserOut(ORMModel):
     onboarded: bool = False
 
 
+# ---- Lifestyle profile (optional "About your life" wizard step) ----
+class LifestyleProfileIn(BaseModel):
+    family_size: Optional[int] = Field(default=None, ge=1, le=20)
+    dependents: Optional[int] = Field(default=None, ge=0, le=20)
+    earners: Optional[str] = None  # "single" | "dual"
+    city_tier: Optional[str] = None  # "metro" | "tier2" | "tier3"
+    short_term_goals: Optional[str] = Field(default=None, max_length=500)
+    long_term_goals: Optional[str] = Field(default=None, max_length=500)
+    emergency_fund: Optional[str] = None  # "none" | "building" | "three_to_six" | "six_plus"
+    other_loans: Optional[str] = None  # "none" | "small" | "significant"
+    savings_level: Optional[str] = None  # "just_starting" | "some_cushion" | "comfortable"
+
+
+class LifestyleProfileOut(LifestyleProfileIn):
+    model_config = ConfigDict(from_attributes=True)
+
+
 # ---- Onboarding ----
 class OnboardingSection(BaseModel):
     name: str
@@ -38,6 +55,9 @@ class OnboardingPayload(BaseModel):
     employment_type: Optional[str] = None  # "salaried" | "business"
     monthly_income: Optional[float] = None
     fixed_bills: list[FixedBill] = []
+    # Optional lifestyle profile; when present it is upserted server-side and
+    # reused by later Build/Revise runs without re-asking.
+    profile: Optional[LifestyleProfileIn] = None
 
 
 class GenerateBudgetPayload(OnboardingPayload):

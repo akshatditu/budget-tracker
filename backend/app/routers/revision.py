@@ -20,6 +20,7 @@ router = APIRouter(prefix="/api/years/{year}", tags=["revision"])
 
 PENDING = "pending"
 ACCEPTED = "accepted"
+DISCARDED = "discarded"
 DRAFT_EXISTS_MSG = (
     "You already have a pending AI budget revision. "
     "Please either accept or discard it before generating another revision."
@@ -147,10 +148,11 @@ def accept_budget_revision(year: int, db: Session = Depends(get_db), user: User 
 
 @router.delete("/budget-revision", status_code=204)
 def discard_budget_revision(year: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Delete the pending draft; the live budget is left untouched."""
+    """Discard the pending draft; the live budget is left untouched. The row is kept
+    (status="discarded") so future revisions can learn what the user rejected."""
     by = get_year_or_404(year, db, user)
     draft = _pending_draft(db, user.id, by.id)
     if draft is not None:
-        db.delete(draft)
+        draft.status = DISCARDED
         db.commit()
     return Response(status_code=204)
