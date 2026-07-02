@@ -248,6 +248,42 @@ def _subcat_annual(spent, budgets, sub_id, year_elapsed) -> dict:
     }
 
 
+def _rank_top_subcats(spent, categories, subs_by_cat, year_elapsed, limit=5) -> list[dict]:
+    """Top spending subcategories by elapsed-window spend, with month-over-month change.
+    Investments are retained wealth — excluded."""
+    if year_elapsed <= 0:
+        return []
+    rows = []
+    for cat in categories:
+        if cat.kind == "investment":
+            continue
+        for sub in subs_by_cat.get(cat.id, []):
+            ytd = sum(spent.get((sub.id, m), 0.0) for m in range(1, year_elapsed + 1))
+            if ytd <= 0:
+                continue
+            this_month = spent.get((sub.id, year_elapsed), 0.0)
+            last_month = spent.get((sub.id, year_elapsed - 1), 0.0) if year_elapsed > 1 else None
+            rows.append(
+                {
+                    "subcategory_id": sub.id,
+                    "name": sub.name,
+                    "section": cat.name,
+                    "ytd_spent": ytd,
+                    "this_month": this_month,
+                    "last_month": last_month,
+                    "mom_change": (this_month - last_month) if last_month is not None else None,
+                }
+            )
+    rows.sort(key=lambda r: r["ytd_spent"], reverse=True)
+    return rows[:limit]
+
+
+def top_spending_subcats(db: Session, by: BudgetYear, user, limit=5) -> list[dict]:
+    categories, subs_by_cat = _active_structure(db, user.id)
+    spent = _spent_by_subcat_month(db, by.id)
+    return _rank_top_subcats(spent, categories, subs_by_cat, elapsed_months(by.year), limit)
+
+
 def annual_rollup(db: Session, by: BudgetYear, user) -> dict:
     categories, subs_by_cat = _active_structure(db, user.id)
     spent = _spent_by_subcat_month(db, by.id)

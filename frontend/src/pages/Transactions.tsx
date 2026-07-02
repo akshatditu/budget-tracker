@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, Trash2, Receipt } from "lucide-react";
+import { Trash2, Receipt } from "lucide-react";
 import { useApp } from "../lib/AppContext";
 import { useTransactions, useSubcategories, useTransactionMutations, useCategories } from "../api/hooks";
 import { moneyCompact, sectionColor, MONTH_NAMES } from "../lib/format";

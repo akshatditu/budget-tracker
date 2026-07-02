@@ -71,6 +71,40 @@ def carry_forward_chain(db: Session, by: BudgetYear) -> list[dict]:
     return chain
 
 
+def liquid_balance_series(chain: list[dict], elapsed: int) -> list[dict]:
+    """Month-by-month liquid bank balance (carry-forward pool less cumulative
+    investments — same basis as the dashboard's in-bank figure), plus a simple
+    straight-line projection from the last elapsed month to December.
+    """
+    cum_invested = 0.0
+    actuals: list[float] = []
+    for row in chain:
+        cum_invested += row["invested"]
+        actuals.append(row["carry_out"] - cum_invested)
+
+    project = 0 < elapsed < 12
+    if project:
+        avg_net = sum(r["income"] - r["spent"] - r["invested"] for r in chain[:elapsed]) / elapsed
+        last_actual = actuals[elapsed - 1]
+
+    series = []
+    for row in chain:
+        m = row["month"]
+        projected = None
+        # Include m == elapsed so the dashed projection connects to the solid line.
+        if project and m >= elapsed:
+            projected = last_actual + avg_net * (m - elapsed)
+        series.append(
+            {
+                "month": m,
+                "month_name": row["month_name"],
+                "actual": actuals[m - 1] if m <= elapsed else None,
+                "projected": projected,
+            }
+        )
+    return series
+
+
 def carry_forward_for_month(db: Session, by: BudgetYear, month: int) -> dict:
     for row in carry_forward_chain(db, by):
         if row["month"] == month:

@@ -487,6 +487,8 @@ export interface DashboardKpis {
   /** income - projected_spend. */
   projected_remaining_in_bank: number;
   elapsed_months: number;
+  /** invested / income over elapsed months; null when no income yet. */
+  savings_rate_ytd: number | null;
 }
 
 export interface SectionSplit {
@@ -505,10 +507,41 @@ export interface MonthlyTrendPoint {
   income: number;
 }
 
+/** Liquid bank balance per month: actual through elapsed months, straight-line projection after. */
+export interface CashTrajectoryPoint {
+  month: number;
+  month_name: string;
+  actual: number | null;
+  projected: number | null;
+}
+
+export interface TopCategoryRow {
+  subcategory_id: number;
+  name: string;
+  section: string;
+  ytd_spent: number;
+  this_month: number;
+  /** null in January (no prior month to compare). */
+  last_month: number | null;
+  mom_change: number | null;
+}
+
+export interface AttentionItem {
+  subcategory_id: number;
+  name: string;
+  section: string;
+  overspent: number;
+  spent: number;
+  revised: number;
+}
+
 export interface Dashboard {
   year: number;
   kpis: DashboardKpis;
   section_split: SectionSplit[];
   monthly_trend: MonthlyTrendPoint[];
   plan_vs_actual: PlanVsActualRow[];
+  cash_trajectory: CashTrajectoryPoint[];
+  top_categories: TopCategoryRow[];
+  needs_attention: AttentionItem[];
 }

@@ -8,7 +8,7 @@ from app.core.deps import get_current_user, get_year_or_404
 from app.models import MonthlySetting, User
 from app.schemas import MonthlySettingPatch, UserOut, UserUpdate
 from app.services import rollup
-from app.services.carryforward import carry_forward_chain
+from app.services.carryforward import carry_forward_chain, liquid_balance_series
 
 router = APIRouter(prefix="/api", tags=["views"])
 
@@ -117,6 +117,17 @@ def dashboard(year: int, db: Session = Depends(get_db), user: User = Depends(get
     # Forecast: extrapolate spending sections' burn rate to the full year.
     spending_pva = [r for r in roll["plan_vs_actual"] if r["section"] in spending_sections]
     projected_spend = sum(r["projected_annual"] for r in spending_pva)
+    income_elapsed = sum(r["income"] for r in chain[:elapsed])
+    # Sub-items overspent in elapsed months (spending sections only), worst first.
+    needs_attention = sorted(
+        (
+            {"subcategory_id": i["subcategory_id"], "name": i["name"], "section": s["name"],
+             "overspent": i["overspent"], "spent": i["spent"], "revised": i["revised"]}
+            for s in roll["sections"] if s["kind"] != "investment"
+            for i in s["items"] if i["overspent"] > 0
+        ),
+        key=lambda r: r["overspent"], reverse=True,
+    )
     return {
         "year": by.year,
         "kpis": {
@@ -130,10 +141,14 @@ def dashboard(year: int, db: Session = Depends(get_db), user: User = Depends(get
             "projected_spend": projected_spend,
             "projected_remaining_in_bank": income_total - projected_spend,
             "elapsed_months": elapsed,
+            "savings_rate_ytd": (invested_elapsed / income_elapsed) if income_elapsed > 0 else None,
         },
         "section_split": section_split,
         "monthly_trend": monthly_trend,
         "plan_vs_actual": roll["plan_vs_actual"],
+        "cash_trajectory": liquid_balance_series(chain, elapsed),
+        "top_categories": rollup.top_spending_subcats(db, by, user, limit=5),
+        "needs_attention": needs_attention,
     }
 
 

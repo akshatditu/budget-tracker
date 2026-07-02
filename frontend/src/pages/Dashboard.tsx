@@ -1,34 +1,24 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, TrendingDown, TrendingUp } from "lucide-react";
 import { useApp } from "../lib/AppContext";
-import { useDashboard } from "../api/hooks";
-import { money, moneyCompact, pct, sectionColor } from "../lib/format";
-import { StatusChip } from "../components/ui";
+import { useDashboard, useMonth } from "../api/hooks";
+import { money, moneyCompact, pct, sectionColor, MONTH_NAMES } from "../lib/format";
+import { ProgressBar, StatusChip } from "../components/ui";
+import { CashTrajectoryChart, MonthlyTrendChart, SavingsRateSparkline } from "../components/charts";
 import RegenerateBudget from "../components/RegenerateBudget";
 import ReviseBudget from "../components/ReviseBudget";
 
 const card = "rounded-[var(--radius)] border border-line bg-surface p-[18px] shadow-[var(--shadow)]";
 
-const INVESTED = "#8b5cf6";
-
-/** Reactive match for Tailwind's `lg` breakpoint (1024px), to flip the chart's bar axis. */
-function useIsDesktop() {
-  const [wide, setWide] = useState(() =>
-    typeof window === "undefined" ? true : window.matchMedia("(min-width: 1024px)").matches);
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 1024px)");
-    const on = () => setWide(mq.matches);
-    mq.addEventListener("change", on);
-    return () => mq.removeEventListener("change", on);
-  }, []);
-  return wide;
-}
-
 export default function Dashboard() {
   const { year } = useApp();
-  const isDesktop = useIsDesktop();
   const { data, isLoading, isError } = useDashboard(year);
+
+  // Hero is "right now" — calendar month, only meaningful for the current year.
+  const now = new Date();
+  const isCurrentYear = year === now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const { data: mv } = useMonth(year, isCurrentYear ? currentMonth : 0);
 
   if (isLoading) return <p className="text-sm text-dim">Loading…</p>;
   if (isError || !data) return <p className="text-sm text-dim">No budget data found for {year}.</p>;
@@ -43,7 +33,19 @@ export default function Dashboard() {
   const maxBar = Math.max(...bars.map((b) => b.spent), 1);
 
   const trend = data.monthly_trend.slice(0, k.elapsed_months);
-  const maxTrend = Math.max(...trend.map((m) => Math.max(m.spent, m.invested)), 1);
+  const savingsSpark = trend.map((m) => ({ month: m.month, rate: m.income > 0 ? m.invested / m.income : null }));
+
+  const dec = data.cash_trajectory[11];
+  const yearEnd = dec ? dec.projected ?? dec.actual : null;
+  const hasCash = data.cash_trajectory.some((p) => p.actual !== null);
+
+  // Month pace: spending-only budget vs spending-only spent (budget_total includes investments).
+  const s = mv?.summary;
+  const monthBudget = mv ? mv.sections.filter((x) => x.kind !== "investment").reduce((t, x) => t + x.totals.revised, 0) : 0;
+  const spentPct = s && monthBudget > 0 ? s.spent / monthBudget : 0;
+  const daysInMonth = new Date(year, currentMonth, 0).getDate();
+  const timePct = now.getDate() / daysInMonth;
+  const offPace = spentPct > timePct + 0.05;
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-3.5">
@@ -60,33 +62,160 @@ export default function Dashboard() {
       {/* Once a budget exists, offer to revise it; first-run users still get "Build with AI". */}
       {plan > 0 ? <ReviseBudget banner /> : <RegenerateBudget banner />}
 
-      {/* Hero — left to spend this year */}
-      <div className={card}>
-        <div className="flex items-baseline justify-between">
-          <span className="text-xs font-bold text-dim">Left to spend this year</span>
-          <span className="rounded-full px-2.5 py-[3px] text-[11px] font-bold" style={{ background: "var(--accentSoft)", color: "var(--accent)" }}>
-            {pct(usedPct)} used
-          </span>
+      {/* Hero — safe to spend today (current year only) */}
+      {isCurrentYear && (
+        <div className={card}>
+          <div className="flex items-baseline justify-between">
+            <span className="text-xs font-bold text-dim">Safe to spend today</span>
+            <Link to="/dashboard/month" className="flex items-center gap-1 text-[12px] font-bold" style={{ color: "var(--accent)" }}>
+              {MONTH_NAMES[currentMonth - 1]} <ArrowRight size={13} />
+            </Link>
+          </div>
+          {s ? (
+            <>
+              <div className="num my-1.5 text-[40px] font-extrabold tracking-tight" style={{ color: "var(--accent)" }}>
+                {moneyCompact(s.safe_to_spend_today)}
+              </div>
+              <div className="text-[12.5px] font-medium text-dim">
+                {moneyCompact(s.available_cash)} in bank · {s.days_left} day{s.days_left === 1 ? "" : "s"} left in {MONTH_NAMES[currentMonth - 1]}
+              </div>
+              <div className="mt-3.5">
+                <ProgressBar value={s.spent} max={monthBudget} />
+              </div>
+              <div className="mt-2 text-[12px] font-semibold" style={{ color: offPace ? "var(--warn)" : "var(--dim)" }}>
+                {pct(spentPct)} of this month's budget spent · {pct(timePct)} through the month
+                {offPace ? " — spending ahead of pace" : ""}
+              </div>
+            </>
+          ) : (
+            <div className="num my-1.5 text-[40px] font-extrabold tracking-tight text-dim">—</div>
+          )}
         </div>
-        <div className="num my-1.5 text-[40px] font-extrabold tracking-tight">{moneyCompact(left)}</div>
-        <div className="text-[12.5px] font-medium text-dim">of {moneyCompact(plan)} planned · {moneyCompact(k.spent)} spent</div>
-        <div className="mt-3.5 h-2.5 overflow-hidden rounded-full bg-surface2">
-          <div className="h-full rounded-full" style={{ width: pct(usedPct), background: "var(--accent)" }} />
-        </div>
-      </div>
+      )}
 
       {/* Three quick stats */}
       <div className="grid grid-cols-3 gap-2.5">
         {[
           { label: "Income", value: moneyCompact(k.income), color: "var(--text)" },
-          { label: "Invested", value: moneyCompact(k.invested), color: "#8b5cf6" },
+          { label: "Invested", value: moneyCompact(k.invested), color: "var(--violet)" },
           { label: "In bank", value: moneyCompact(k.remaining_in_bank), color: "var(--pos)" },
-        ].map((s) => (
-          <div key={s.label} className="rounded-[var(--radiusSm)] border border-line bg-surface p-3 shadow-[var(--shadow)]">
-            <div className="text-[10.5px] font-bold uppercase tracking-[.05em] text-dim">{s.label}</div>
-            <div className="num mt-1 text-[19px] font-extrabold" style={{ color: s.color }}>{s.value}</div>
+        ].map((q) => (
+          <div key={q.label} className="rounded-[var(--radiusSm)] border border-line bg-surface p-3 shadow-[var(--shadow)]">
+            <div className="text-[10.5px] font-bold uppercase tracking-[.05em] text-dim">{q.label}</div>
+            <div className="num mt-1 text-[19px] font-extrabold" style={{ color: q.color }}>{q.value}</div>
           </div>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
+        {/* Left to spend this year */}
+        <div className={card}>
+          <div className="flex items-baseline justify-between">
+            <span className="text-xs font-bold text-dim">Left to spend this year</span>
+            <span className="rounded-full px-2.5 py-[3px] text-[11px] font-bold" style={{ background: "var(--accentSoft)", color: "var(--accent)" }}>
+              {pct(usedPct)} used
+            </span>
+          </div>
+          <div className="num my-1.5 text-[28px] font-extrabold tracking-tight">{moneyCompact(left)}</div>
+          <div className="text-[12.5px] font-medium text-dim">of {moneyCompact(plan)} planned · {moneyCompact(k.spent)} spent</div>
+          <div className="mt-3.5 h-2.5 overflow-hidden rounded-full bg-surface2">
+            <div className="h-full rounded-full" style={{ width: pct(usedPct), background: "var(--accent)" }} />
+          </div>
+        </div>
+
+        {/* Savings rate */}
+        <div className={card}>
+          <div className="flex items-baseline justify-between">
+            <span className="text-xs font-bold text-dim">Savings rate</span>
+            <span className="text-[11.5px] font-semibold text-dim">invested ÷ income</span>
+          </div>
+          <div className="num my-1.5 text-[28px] font-extrabold tracking-tight" style={{ color: "var(--violet)" }}>
+            {k.savings_rate_ytd !== null ? pct(k.savings_rate_ytd) : "—"}
+          </div>
+          {savingsSpark.length > 1 ? (
+            <SavingsRateSparkline data={savingsSpark} />
+          ) : (
+            <div className="py-4 text-[12.5px] font-medium text-dim">Not enough months to chart yet.</div>
+          )}
+        </div>
+      </div>
+
+      {/* Cash trajectory */}
+      <div className={card}>
+        <div className="mb-3 flex items-baseline justify-between">
+          <span className="text-[15px] font-extrabold tracking-tight">Cash trajectory</span>
+          {yearEnd !== null && (
+            <span className="text-[11.5px] font-semibold text-dim">
+              Projected year-end: <span className="num font-bold" style={{ color: yearEnd < 0 ? "var(--neg)" : "var(--pos)" }}>{moneyCompact(yearEnd)}</span>
+            </span>
+          )}
+        </div>
+        {hasCash ? (
+          <CashTrajectoryChart data={data.cash_trajectory} />
+        ) : (
+          <p className="py-6 text-center text-sm text-dim">No cash activity recorded yet.</p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
+        {/* Top spending categories */}
+        <div className={card}>
+          <div className="mb-3.5 text-[15px] font-extrabold tracking-tight">Top spending categories</div>
+          {data.top_categories.length === 0 ? (
+            <p className="py-6 text-center text-sm text-dim">No spend recorded yet.</p>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {data.top_categories.map((t) => (
+                <div key={t.subcategory_id} className="flex items-center justify-between">
+                  <span className="flex min-w-0 items-center gap-2 text-[13px] font-semibold">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ background: sectionColor(t.section) }} />
+                    <span className="truncate">{t.name}</span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2.5">
+                    {t.mom_change === null ? (
+                      <span className="text-[11px] font-semibold text-dim">—</span>
+                    ) : (
+                      <span className="flex items-center gap-0.5 text-[11px] font-bold" style={{ color: t.mom_change > 0 ? "var(--neg)" : "var(--pos)" }}>
+                        {t.mom_change > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                        <span className="num">{money(Math.abs(t.mom_change))}</span>
+                      </span>
+                    )}
+                    <span className="num text-[13px] font-bold">{moneyCompact(t.ytd_spent)}</span>
+                  </span>
+                </div>
+              ))}
+              <div className="mt-1 text-[11px] font-medium text-dim">Year to date · arrow = change vs last month</div>
+            </div>
+          )}
+        </div>
+
+        {/* Needs attention — overspent envelopes */}
+        <div className={card}>
+          <div className="mb-3.5 text-[15px] font-extrabold tracking-tight">Needs attention</div>
+          {data.needs_attention.length === 0 ? (
+            <p className="py-6 text-center text-sm font-semibold" style={{ color: "var(--pos)" }}>
+              Nothing overspent — envelopes on track.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {data.needs_attention.slice(0, 6).map((a) => (
+                <Link key={a.subcategory_id} to="/dashboard/month" className="flex items-center justify-between">
+                  <span className="flex min-w-0 items-center gap-2 text-[13px] font-semibold">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ background: sectionColor(a.section) }} />
+                    <span className="truncate">{a.name}</span>
+                  </span>
+                  <span className="num shrink-0 text-[13px] font-bold" style={{ color: "var(--neg)" }}>
+                    {money(a.overspent)} over
+                  </span>
+                </Link>
+              ))}
+              <div className="mt-1 text-[11px] font-medium text-dim">
+                Overspend across elapsed months, worst first
+                {data.needs_attention.length > 6 ? ` · +${data.needs_attention.length - 6} more in Annual view` : ""}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
@@ -141,45 +270,14 @@ export default function Dashboard() {
           <span className="text-[15px] font-extrabold tracking-tight">This year</span>
           <span className="text-[11.5px] font-semibold text-dim">spent vs invested</span>
         </div>
-        <div className="flex flex-col gap-2 lg:h-28 lg:flex-row lg:items-end lg:justify-between">
-          {trend.map((m) =>
-            isDesktop ? (
-              <div key={m.month} className="group relative flex h-full flex-1 flex-col items-center justify-end gap-2">
-                <div className="flex h-20 w-full items-end justify-center gap-1">
-                  <div className="w-[40%] rounded-t-md" style={{ height: `${(m.spent / maxTrend) * 100}%`, background: "var(--accent)" }} />
-                  <div className="w-[40%] rounded-t-md" style={{ height: `${(m.invested / maxTrend) * 100}%`, background: INVESTED }} />
-                </div>
-                <span className="text-[10.5px] font-semibold text-dim">{m.month}</span>
-                <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-[var(--radiusSm)] border border-line bg-surface px-2.5 py-1.5 text-[11px] font-semibold shadow-[var(--shadow)] group-hover:block">
-                  <div className="mb-1 font-bold">{m.month}</div>
-                  <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-[2px]" style={{ background: "var(--accent)" }} /> <span className="num">{money(m.spent)}</span> spent</div>
-                  <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-[2px]" style={{ background: INVESTED }} /> <span className="num">{money(m.invested)}</span> invested</div>
-                </div>
-              </div>
-            ) : (
-              <div key={m.month} className="flex items-center gap-2">
-                <span className="w-9 shrink-0 text-[11px] font-semibold text-dim">{m.month}</span>
-                <div className="flex flex-1 flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <div className="min-w-0 flex-1">
-                      <div className="h-2.5 rounded-r-md" style={{ width: `${(m.spent / maxTrend) * 100}%`, background: "var(--accent)", minWidth: m.spent > 0 ? 2 : 0 }} />
-                    </div>
-                    <span className="num w-14 shrink-0 text-right text-[10px] font-semibold text-dim">{moneyCompact(m.spent)}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="min-w-0 flex-1">
-                      <div className="h-2.5 rounded-r-md" style={{ width: `${(m.invested / maxTrend) * 100}%`, background: INVESTED, minWidth: m.invested > 0 ? 2 : 0 }} />
-                    </div>
-                    <span className="num w-14 shrink-0 text-right text-[10px] font-semibold text-dim">{moneyCompact(m.invested)}</span>
-                  </div>
-                </div>
-              </div>
-            ),
-          )}
-        </div>
+        {trend.length === 0 ? (
+          <p className="py-6 text-center text-sm text-dim">The year hasn't started yet.</p>
+        ) : (
+          <MonthlyTrendChart data={trend} />
+        )}
         <div className="mt-3 flex items-center gap-4 text-[11px] font-semibold text-dim">
           <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: "var(--accent)" }} /> Spent</span>
-          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: INVESTED }} /> Invested</span>
+          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: "var(--violet)" }} /> Invested</span>
           <span className="ml-auto num">{moneyCompact(k.spent)} spent · {moneyCompact(k.invested)} invested</span>
         </div>
       </div>
