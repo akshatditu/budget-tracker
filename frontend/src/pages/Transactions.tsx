@@ -1,18 +1,11 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState } from "react";
 import { Plus, Trash2, Receipt } from "lucide-react";
 import { useApp } from "../lib/AppContext";
 import { useTransactions, useSubcategories, useTransactionMutations, useCategories } from "../api/hooks";
 import { moneyCompact, sectionColor, MONTH_NAMES } from "../lib/format";
-import { Card, Button, Input, Select, Field, EmptyState } from "../components/ui";
+import { Card, Select, EmptyState } from "../components/ui";
 import AddExpenseSheet from "../components/AddExpenseSheet";
 import type { TransactionFilter } from "../types/api";
-
-interface TransactionForm {
-  subcategory_id: string;
-  txn_date: string;
-  amount: string;
-  note: string;
-}
 
 export default function Transactions() {
   const { year } = useApp();
@@ -24,7 +17,7 @@ export default function Transactions() {
   if (fMonth) params.month = Number(fMonth);
   if (fSub) params.subcategory_id = Number(fSub);
   const { data: txns = [] } = useTransactions(year, params);
-  const { create, remove } = useTransactionMutations(year);
+  const { remove } = useTransactionMutations(year);
 
   const subName = useMemo(
     () => Object.fromEntries(subs.map((s): [number, string] => [s.id, s.name])),
@@ -40,15 +33,6 @@ export default function Transactions() {
   );
 
   const [addOpen, setAddOpen] = useState(false);
-  const [form, setForm] = useState<TransactionForm>({ subcategory_id: "", txn_date: `${year}-01-01`, amount: "", note: "" });
-  const submit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!form.subcategory_id || !form.amount) return;
-    create.mutate(
-      { subcategory_id: Number(form.subcategory_id), txn_date: form.txn_date, amount: Number(form.amount), note: form.note || null },
-      { onSuccess: () => setForm((f) => ({ ...f, amount: "", note: "" })) }
-    );
-  };
 
   const total = txns.reduce((a, t) => a + t.amount, 0);
 
@@ -56,31 +40,14 @@ export default function Transactions() {
     <div className="space-y-6">
       <h1 className="hidden text-[26px] font-extrabold tracking-tight lg:block">{year} Transactions</h1>
 
-      {/* Mobile: dashed button opens the design's quick-add sheet */}
+      {/* Dashed CTA opens the quick-add sheet (replaces the inline form on all sizes)
       <button
         onClick={() => setAddOpen(true)}
-        className="flex w-full items-center justify-center gap-2 rounded-[var(--radiusSm)] border border-dashed py-3.5 text-sm font-bold lg:hidden"
+        className="flex w-full items-center justify-center gap-2 rounded-[var(--radiusSm)] border border-dashed py-3.5 text-sm font-bold"
         style={{ borderColor: "var(--accent)", background: "var(--accentSoft)", color: "var(--accent2)" }}
       >
         <Plus size={16} /> Add an expense
-      </button>
-
-      <div className="hidden lg:block">
-      <Card title="Add expense">
-        <form onSubmit={submit} className="grid grid-cols-1 gap-3 md:grid-cols-5">
-          <Field label="Item">
-            <Select value={form.subcategory_id} onChange={(e) => setForm({ ...form, subcategory_id: e.target.value })}>
-              <option value="">Select…</option>
-              {subs.map((s) => <option key={s.id} value={s.id}>{subCat[s.id]} › {s.name}</option>)}
-            </Select>
-          </Field>
-          <Field label="Date"><Input type="date" min={`${year}-01-01`} max={`${year}-12-31`} value={form.txn_date} onChange={(e) => setForm({ ...form, txn_date: e.target.value })} /></Field>
-          <Field label="Amount"><Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0" /></Field>
-          <Field label="Note"><Input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Optional" /></Field>
-          <div className="flex items-end"><Button type="submit" className="w-full justify-center"><Plus size={16} /> Add</Button></div>
-        </form>
-      </Card>
-      </div>
+      </button> */}
 
       <Card
         title={`Ledger (${txns.length}) · ${moneyCompact(total)}`}
