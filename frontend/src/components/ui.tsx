@@ -8,7 +8,9 @@ import {
   type ReactNode,
   type SelectHTMLAttributes,
 } from "react";
-import { X, type LucideIcon } from "lucide-react";
+import { CalendarDays, X, type LucideIcon } from "lucide-react";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/style.css";
 import { money, type Numeric } from "../lib/format";
 
 interface CardProps {
@@ -252,6 +254,83 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
       className={`w-full min-w-0 rounded-[var(--radiusXs)] border border-line px-3.5 py-3 text-base font-semibold text-ink outline-none transition focus:border-[var(--accent)] ${props.className || ""}`}
       style={{ background: "var(--bg)", ...props.style }}
     />
+  );
+}
+
+const isoToDate = (s: string) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const dateToIso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const fmtDate = (s: string) => isoToDate(s).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+
+interface DateFieldProps {
+  value: string;                    // ISO "yyyy-MM-dd"
+  onChange: (iso: string) => void;
+  min?: string;                     // ISO "yyyy-MM-dd"
+  max?: string;                     // ISO "yyyy-MM-dd"
+  className?: string;
+}
+
+/** Themed date picker: an Input-styled trigger that opens a react-day-picker
+ *  calendar popover matching the active theme. Replaces the native date input. */
+export function DateField({ value, onChange, min, max, className = "" }: DateFieldProps) {
+  const [open, setOpen] = useState(false);
+  // Fixed viewport coords so the calendar escapes the bottom-sheet's overflow
+  // clipping; anchored to sit *above* the trigger.
+  const [coords, setCoords] = useState<{ left: number; bottom: number } | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  const toggle = () => {
+    if (open) { setOpen(false); return; }
+    const r = ref.current?.getBoundingClientRect();
+    if (r) {
+      const width = 300;
+      setCoords({
+        left: Math.max(8, Math.min(r.left, window.innerWidth - width - 8)),
+        bottom: window.innerHeight - r.top + 6,
+      });
+    }
+    setOpen(true);
+  };
+
+  const selected = value ? isoToDate(value) : undefined;
+  const minD = min ? isoToDate(min) : undefined;
+  const maxD = max ? isoToDate(max) : undefined;
+
+  return (
+    <div ref={ref} className={`relative min-w-0 ${className}`}>
+      <button
+        type="button"
+        onClick={toggle}
+        className="flex w-full items-center justify-between gap-2 rounded-[var(--radiusXs)] border border-line px-3.5 py-3 text-base font-semibold text-ink outline-none transition focus:border-[var(--accent)]"
+        style={{ background: "var(--bg)" }}
+      >
+        <span className={value ? "" : "text-faint"}>{value ? fmtDate(value) : "Pick a date"}</span>
+        <CalendarDays size={16} className="shrink-0 text-dim" />
+      </button>
+      {open && coords && (
+        <div
+          className="fixed z-[100] w-max rounded-[var(--radiusSm)] border border-line bg-surface p-2 shadow-[var(--shadow)]"
+          style={{ left: coords.left, bottom: coords.bottom }}
+        >
+          <DayPicker
+            className="bt-daypicker"
+            mode="single"
+            selected={selected}
+            defaultMonth={selected ?? minD}
+            startMonth={minD}
+            endMonth={maxD}
+            disabled={[...(minD ? [{ before: minD }] : []), ...(maxD ? [{ after: maxD }] : [])]}
+            onSelect={(d) => { if (d) { onChange(dateToIso(d)); setOpen(false); } }}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 

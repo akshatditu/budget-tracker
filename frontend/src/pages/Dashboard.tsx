@@ -52,7 +52,7 @@ export default function Dashboard() {
           <h1 className="text-[26px] font-extrabold tracking-tight">Overview</h1>
           <p className="mt-1 text-[13.5px] font-medium text-dim">Your {year} budget at a glance</p>
         </div>
-        <Link to="/month" className="hidden items-center gap-1 text-sm font-bold sm:flex" style={{ color: "var(--accent)" }}>
+        <Link to="/dashboard/month" className="hidden items-center gap-1 text-sm font-bold sm:flex" style={{ color: "var(--accent)" }}>
           Month view <ArrowRight size={16} />
         </Link>
       </div>

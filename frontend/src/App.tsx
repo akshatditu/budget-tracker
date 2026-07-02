@@ -1,7 +1,8 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider } from "./lib/AppContext";
 import { ThemeProvider } from "./lib/theme";
 import { useAuth, useAuthExpiryListener } from "./lib/auth";
+import type { User } from "./types/api";
 import Layout from "./components/Layout";
 import AppLoader from "./components/AppLoader";
 import Login from "./pages/Login";
@@ -18,26 +19,9 @@ import Reconciliation from "./pages/Reconciliation";
 import Guide from "./pages/Guide";
 import Settings from "./pages/Settings";
 
-export default function App() {
-  useAuthExpiryListener();
-  const { data: user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return <AppLoader />;
-  }
-
-  // Signed-out visitors see the marketing landing page; /login keeps the bare
-  // Google sign-in card reachable. Both route into the same OAuth flow.
-  if (!user) {
-    return (
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="*" element={<Landing />} />
-      </Routes>
-    );
-  }
-
-  // First-run users build their sections before entering the app.
+// Mounted at /dashboard/*. First-run users build their sections before
+// entering the app; everyone else gets the full authenticated shell.
+function DashboardApp({ user }: { user: User }) {
   if (!user.onboarded) return <Onboarding />;
 
   return (
@@ -59,5 +43,26 @@ export default function App() {
         </Layout>
       </AppProvider>
     </ThemeProvider>
+  );
+}
+
+export default function App() {
+  useAuthExpiryListener();
+  const { data: user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <AppLoader />;
+  }
+
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+      <Route
+        path="/dashboard/*"
+        element={user ? <DashboardApp user={user} /> : <Navigate to="/" replace />}
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

@@ -54,3 +54,12 @@ export const SECTION_COLORS: Record<string, string> = {
 };
 
 export const sectionColor = (name: string): string => SECTION_COLORS[name] || "var(--color-brand)";
+
+/** Default ISO date ("yyyy-MM-dd") for a new transaction in the given month:
+ *  today when it falls in that month, else the 1st — keeping it inside the
+ *  budget year the API requires and honoring the drawer's "Add to <month>". */
+export const defaultTxnDate = (year: number, month: number): string => {
+  const now = new Date();
+  const day = now.getFullYear() === year && now.getMonth() + 1 === month ? now.getDate() : 1;
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+};

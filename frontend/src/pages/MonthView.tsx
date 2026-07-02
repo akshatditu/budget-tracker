@@ -5,9 +5,9 @@ import {
   useMonth, useBudgetMutations, useTransactions, useTransactionMutations,
   useIncomes, useIncomeMutations,
 } from "../api/hooks";
-import { money, moneyCompact, sectionColor, MONTH_NAMES } from "../lib/format";
+import { money, moneyCompact, sectionColor, MONTH_NAMES, defaultTxnDate } from "../lib/format";
 import {
-  Card, EditableNumber, ProgressBar, Sheet, Button, Input,
+  Card, EditableNumber, ProgressBar, Sheet, Button, Input, DateField,
 } from "../components/ui";
 import type { MonthItem, MonthSection } from "../types/api";
 
@@ -26,15 +26,16 @@ interface TransactionDrawerProps {
 function TransactionDrawer({ year, month, section, sub, onClose }: TransactionDrawerProps) {
   const { data: txns = [] } = useTransactions(year, { month, subcategory_id: sub.subcategory_id });
   const { create, remove } = useTransactionMutations(year);
+  const [txnDate, setTxnDate] = useState(() => defaultTxnDate(year, month));
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const tone = remTone(sub);
   const barPct = sub.available > 0 ? Math.min(sub.spent / sub.available, 1) * 100 : sub.spent > 0 ? 100 : 0;
 
   const add = () => {
-    if (!amount) return;
+    if (!amount || !txnDate) return;
     create.mutate(
-      { subcategory_id: sub.subcategory_id, txn_date: `${year}-${String(month).padStart(2, "0")}-01`, amount: Number(amount), note: note || null },
+      { subcategory_id: sub.subcategory_id, txn_date: txnDate, amount: Number(amount), note: note || null },
       { onSuccess: () => { setAmount(""); setNote(""); } },
     );
   };
@@ -75,7 +76,10 @@ function TransactionDrawer({ year, month, section, sub, onClose }: TransactionDr
 
       <div className="mt-5 text-[13px] font-extrabold">Add expense</div>
       <form onSubmit={(e: FormEvent) => { e.preventDefault(); add(); }} className="mt-2.5 flex flex-col gap-2.5">
-        <Input inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount ₹" className="num" />
+        <div className="grid grid-cols-2 gap-2.5">
+          <DateField value={txnDate} onChange={setTxnDate} min={`${year}-01-01`} max={`${year}-12-31`} />
+          <Input inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount ₹" className="num" />
+        </div>
         <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" />
         <Button type="submit" disabled={!amount || create.isPending} className="w-full justify-center py-4 text-[15px] font-extrabold">
           {create.isPending ? "Adding…" : `Add to ${MONTH_NAMES[month - 1]}`}

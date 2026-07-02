@@ -10,7 +10,7 @@ export default function Onboarding() {
 
   // On success, land on Budget Setup so the user reviews/edits the generated budget.
   useEffect(() => {
-    if (complete.isSuccess) window.location.assign("/setup");
+    if (complete.isSuccess) window.location.assign("/dashboard/setup");
   }, [complete.isSuccess]);
 
   const welcome = (

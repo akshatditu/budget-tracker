@@ -53,7 +53,7 @@ async def callback(request: Request, db: Session = Depends(get_db)):
         db.commit()
 
     request.session["user_email"] = email
-    return RedirectResponse(url=settings.frontend_url, status_code=303)
+    return RedirectResponse(url=f"{settings.frontend_url.rstrip('/')}/dashboard", status_code=303)
 
 
 @router.get("/me")

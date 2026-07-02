@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { useApp } from "../lib/AppContext";
 import { useCategories, useSubcategories, useTransactionMutations } from "../api/hooks";
-import { sectionColor, MONTH_NAMES } from "../lib/format";
-import { Sheet } from "./ui";
+import { sectionColor, MONTH_NAMES, defaultTxnDate } from "../lib/format";
+import { DateField, Sheet } from "./ui";
 
 /**
  * The mobile design's two-step quick-add expense flow:
@@ -18,18 +18,19 @@ export default function AddExpenseSheet({ open, onClose }: { open: boolean; onCl
 
   const [catId, setCatId] = useState<number | null>(null);
   const [subId, setSubId] = useState<number | null>(null);
+  const [txnDate, setTxnDate] = useState(() => defaultTxnDate(year, month));
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
   const items = useMemo(() => subs.filter((s) => s.category_id === catId && !s.archived), [subs, catId]);
 
-  const reset = () => { setCatId(null); setSubId(null); setAmount(""); setNote(""); };
+  const reset = () => { setCatId(null); setSubId(null); setTxnDate(defaultTxnDate(year, month)); setAmount(""); setNote(""); };
   const close = () => { reset(); onClose(); };
 
   const commit = () => {
-    if (!subId || !amount) return;
+    if (!subId || !amount || !txnDate) return;
     create.mutate(
-      { subcategory_id: subId, txn_date: `${year}-${String(month).padStart(2, "0")}-01`, amount: Number(amount), note: note || null },
+      { subcategory_id: subId, txn_date: txnDate, amount: Number(amount), note: note || null },
       { onSuccess: close },
     );
   };
@@ -86,14 +87,17 @@ export default function AddExpenseSheet({ open, onClose }: { open: boolean; onCl
 
           {subId !== null && (
             <>
-              <input
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                inputMode="numeric"
-                placeholder="Amount ₹"
-                className="num mt-4 w-full rounded-[var(--radiusXs)] border border-line px-3.5 py-3.5 text-base font-bold text-ink outline-none focus:border-[var(--accent)]"
-                style={{ background: "var(--bg)" }}
-              />
+              <div className="mt-4 grid grid-cols-2 gap-2.5">
+                <DateField value={txnDate} onChange={setTxnDate} min={`${year}-01-01`} max={`${year}-12-31`} />
+                <input
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  inputMode="numeric"
+                  placeholder="Amount ₹"
+                  className="num w-full rounded-[var(--radiusXs)] border border-line px-3.5 py-3.5 text-base font-bold text-ink outline-none focus:border-[var(--accent)]"
+                  style={{ background: "var(--bg)" }}
+                />
+              </div>
               <input
                 value={note}
                 onChange={(e) => setNote(e.target.value)}

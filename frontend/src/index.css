@@ -207,6 +207,41 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+/* Native date inputs (desktop forms) follow the active theme so the calendar
+   popup and picker glyph render light/dark instead of the OS default. */
+.app input[type="date"] { color-scheme: light; }
+.app[data-theme="dark"] input[type="date"] { color-scheme: dark; }
+.app input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: .55;
+  transition: opacity .15s ease;
+}
+.app input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
+
+/* react-day-picker (DateField) themed to the active palette (calm/bold × light/dark). */
+.bt-daypicker {
+  --rdp-accent-color: var(--accent);
+  --rdp-accent-background-color: var(--accentSoft);
+  --rdp-today-color: var(--accent2);
+  --rdp-day-width: 2.35rem; --rdp-day-height: 2.35rem;
+  --rdp-day_button-width: 2.05rem; --rdp-day_button-height: 2.05rem;
+  --rdp-day_button-border-radius: var(--radiusXs);
+  --rdp-selected-border: 1.5px solid var(--accent);
+  margin: 0;
+  font-family: var(--font-ui);
+  color: var(--text);
+}
+.bt-daypicker .rdp-day_button:hover { background: var(--surface2); }
+.bt-daypicker .rdp-selected .rdp-day_button {
+  background: var(--accentSoft);
+  color: var(--accent2);
+  font-weight: 800;
+}
+.bt-daypicker .rdp-weekday { color: var(--dim); font-weight: 700; opacity: 1; }
+.bt-daypicker .rdp-caption_label { font-weight: 800; color: var(--text); }
+.bt-daypicker .rdp-chevron { fill: var(--accent); }
+.bt-daypicker :is(.rdp-button_next, .rdp-button_previous):hover { background: var(--surface2); border-radius: var(--radiusXs); }
+
 /* ── Landing-page motion primitives (CSS handles the always-on, looping
    animations; Framer Motion drives scroll/interaction choreography) ── */
 @keyframes lp-float {

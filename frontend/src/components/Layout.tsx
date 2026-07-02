@@ -23,16 +23,16 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true, tour: "nav-dashboard" },
-  { to: "/month", label: "Month", icon: CalendarDays, tour: "nav-month" },
-  { to: "/rollup", label: "Annual Rollup", icon: TableProperties },
-  { to: "/setup", label: "Budget Setup", icon: SlidersHorizontal, tour: "nav-setup" },
-  { to: "/transactions", label: "Transactions", icon: Receipt, tour: "nav-transactions" },
-  { to: "/income", label: "Income", icon: Wallet, tour: "nav-income" },
-  { to: "/goals", label: "Goals", icon: Target },
-  { to: "/reconcile", label: "Reconcile", icon: Scale },
-  { to: "/guide", label: "Guide", icon: BookOpen },
-  { to: "/settings", label: "Settings", icon: SettingsIcon },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true, tour: "nav-dashboard" },
+  { to: "/dashboard/month", label: "Month", icon: CalendarDays, tour: "nav-month" },
+  { to: "/dashboard/rollup", label: "Annual Rollup", icon: TableProperties },
+  { to: "/dashboard/setup", label: "Budget Setup", icon: SlidersHorizontal, tour: "nav-setup" },
+  { to: "/dashboard/transactions", label: "Transactions", icon: Receipt, tour: "nav-transactions" },
+  { to: "/dashboard/income", label: "Income", icon: Wallet, tour: "nav-income" },
+  { to: "/dashboard/goals", label: "Goals", icon: Target },
+  { to: "/dashboard/reconcile", label: "Reconcile", icon: Scale },
+  { to: "/dashboard/guide", label: "Guide", icon: BookOpen },
+  { to: "/dashboard/settings", label: "Settings", icon: SettingsIcon },
 ];
 
 /** BudgetIQ mark + gradient wordmark, matching the brand design. */
@@ -74,7 +74,7 @@ function YearMonthBar({ mobile = false }: { mobile?: boolean }) {
   const createYear = useCreateYear();
   const { pathname } = useLocation();
   // The month nav only belongs on the Month view, where it's actionable.
-  const showMonth = pathname.startsWith("/month");
+  const showMonth = pathname.startsWith("/dashboard/month");
 
   // Fall back to the most recent existing year if the stored one is gone.
   useEffect(() => {
@@ -115,22 +115,22 @@ function YearMonthBar({ mobile = false }: { mobile?: boolean }) {
 
 /** Per-screen title shown in the mobile header (the body's own h1 is hidden on mobile). */
 const SCREEN_TITLES: Record<string, string> = {
-  "/": "Overview",
-  "/rollup": "Reports",
-  "/setup": "Budget Setup",
-  "/transactions": "Transactions",
-  "/income": "Income",
-  "/goals": "Goals",
-  "/reconcile": "Reconcile",
-  "/guide": "Guide",
-  "/settings": "Settings",
+  "/dashboard": "Overview",
+  "/dashboard/rollup": "Reports",
+  "/dashboard/setup": "Budget Setup",
+  "/dashboard/transactions": "Transactions",
+  "/dashboard/income": "Income",
+  "/dashboard/goals": "Goals",
+  "/dashboard/reconcile": "Reconcile",
+  "/dashboard/guide": "Guide",
+  "/dashboard/settings": "Settings",
 };
 
 /** Mobile header brand eyebrow + the current screen's title (the Month view shows the month). */
 function MobileHeading() {
   const { month } = useApp();
   const { pathname } = useLocation();
-  const title = pathname.startsWith("/month") ? MONTH_NAMES[month - 1] : SCREEN_TITLES[pathname] ?? "Overview";
+  const title = pathname.startsWith("/dashboard/month") ? MONTH_NAMES[month - 1] : SCREEN_TITLES[pathname] ?? "Overview";
   return (
     <div className="min-w-0">
       <div className="truncate text-[11px] font-bold leading-none tracking-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
@@ -198,7 +198,7 @@ function BottomNav({ onMore, onAdd }: { onMore: () => void; onAdd: () => void })
   const tab = (active: boolean) =>
     active ? "var(--accent)" : "var(--faint)";
   const Item = ({ to, icon: Icon, label }: { to: string; icon: LucideIcon; label: string }) => (
-    <NavLink to={to} end={to === "/"} className="flex flex-1 flex-col items-center gap-[3px]" style={({ isActive }) => ({ color: tab(isActive) })}>
+    <NavLink to={to} end={to === "/dashboard"} className="flex flex-1 flex-col items-center gap-[3px]" style={({ isActive }) => ({ color: tab(isActive) })}>
       <Icon size={19} />
       <span className="text-[10px] font-bold">{label}</span>
     </NavLink>
@@ -208,8 +208,8 @@ function BottomNav({ onMore, onAdd }: { onMore: () => void; onAdd: () => void })
       className="fixed inset-x-0 bottom-0 z-30 flex items-end justify-around border-t border-line bg-surface px-3 pb-[max(14px,env(safe-area-inset-bottom))] pt-2 lg:hidden"
       style={{ boxShadow: "0 -6px 24px rgba(0,0,0,.06)" }}
     >
-      <Item to="/" icon={Home} label="Home" />
-      <Item to="/month" icon={CalendarDays} label="Month" />
+      <Item to="/dashboard" icon={Home} label="Home" />
+      <Item to="/dashboard/month" icon={CalendarDays} label="Month" />
       <button onClick={onAdd} className="flex flex-1 justify-center">
         <span
           className="-mt-5 grid h-[54px] w-[54px] place-items-center rounded-[18px] text-white"
@@ -218,11 +218,11 @@ function BottomNav({ onMore, onAdd }: { onMore: () => void; onAdd: () => void })
           <Plus size={26} />
         </span>
       </button>
-      <Item to="/rollup" icon={BarChart3} label="Reports" />
+      <Item to="/dashboard/rollup" icon={BarChart3} label="Reports" />
       <button
         onClick={onMore}
         className="flex flex-1 flex-col items-center gap-[3px]"
-        style={{ color: ["/setup", "/income", "/goals", "/reconcile", "/guide", "/settings"].includes(pathname) ? "var(--accent)" : "var(--faint)" }}
+        style={{ color: ["/dashboard/setup", "/dashboard/income", "/dashboard/goals", "/dashboard/reconcile", "/dashboard/guide", "/dashboard/settings"].includes(pathname) ? "var(--accent)" : "var(--faint)" }}
       >
         <MoreHorizontal size={19} />
         <span className="text-[10px] font-bold">More</span>
@@ -241,7 +241,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   // Auto-run the guided tour once, on the first dashboard visit after onboarding.
   useEffect(() => {
-    if (!user || pathname !== "/") return;
+    if (!user || pathname !== "/dashboard") return;
     const key = tourSeenKey(user.id);
     if (localStorage.getItem(key)) return;
     localStorage.setItem(key, "1");

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Moon, Sun } from "lucide-react";
 import { BudgetIQIcon } from "../Logo";
 import { loginHref } from "./shared";
+import { useAuth } from "../../lib/auth";
 
 const LINKS = [
   { label: "Features", href: "#features" },
@@ -20,6 +21,7 @@ export default function Navbar({
 }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const { data: user } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -73,18 +75,29 @@ export default function Navbar({
           >
             {dark ? <Sun size={18} /> : <Moon size={18} />}
           </button>
-          <a
-            href={loginHref}
-            className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:text-slate-900 sm:block dark:text-slate-200 dark:hover:text-white"
-          >
-            Sign In
-          </a>
-          <a
-            href={loginHref}
-            className="hidden rounded-xl bg-gradient-to-r from-teal-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-teal-600/25 transition-shadow hover:shadow-xl hover:shadow-teal-600/40 sm:inline-flex"
-          >
-            Get Started
-          </a>
+          {user ? (
+            <a
+              href="/dashboard"
+              className="hidden rounded-xl bg-gradient-to-r from-teal-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-teal-600/25 transition-shadow hover:shadow-xl hover:shadow-teal-600/40 sm:inline-flex"
+            >
+              Go to Dashboard
+            </a>
+          ) : (
+            <>
+              <a
+                href={loginHref}
+                className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:text-slate-900 sm:block dark:text-slate-200 dark:hover:text-white"
+              >
+                Sign In
+              </a>
+              <a
+                href={loginHref}
+                className="hidden rounded-xl bg-gradient-to-r from-teal-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-teal-600/25 transition-shadow hover:shadow-xl hover:shadow-teal-600/40 sm:inline-flex"
+              >
+                Get Started
+              </a>
+            </>
+          )}
           <button
             onClick={() => setOpen((v) => !v)}
             aria-label="Toggle menu"
@@ -116,10 +129,10 @@ export default function Navbar({
                 </a>
               ))}
               <a
-                href={loginHref}
+                href={user ? "/dashboard" : loginHref}
                 className="mt-2 block rounded-xl bg-gradient-to-r from-teal-600 to-violet-600 px-3 py-2.5 text-center text-sm font-semibold text-white"
               >
-                Get Started
+                {user ? "Go to Dashboard" : "Get Started"}
               </a>
             </div>
           </motion.div>
