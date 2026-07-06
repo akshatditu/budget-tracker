@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
-import { Trash2, Receipt } from "lucide-react";
+import { Trash2, Pencil, Receipt } from "lucide-react";
 import { useApp } from "../lib/AppContext";
 import { useTransactions, useSubcategories, useTransactionMutations, useCategories } from "../api/hooks";
 import { moneyCompact, sectionColor, MONTH_NAMES } from "../lib/format";
 import { Card, Select, EmptyState } from "../components/ui";
 import AddExpenseSheet from "../components/AddExpenseSheet";
-import type { TransactionFilter } from "../types/api";
+import EditTransactionSheet from "../components/EditTransactionSheet";
+import type { Transaction, TransactionFilter } from "../types/api";
 
 export default function Transactions() {
   const { year } = useApp();
@@ -33,6 +34,7 @@ export default function Transactions() {
   );
 
   const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<Transaction | null>(null);
 
   const total = txns.reduce((a, t) => a + t.amount, 0);
 
@@ -77,7 +79,7 @@ export default function Transactions() {
                 <th className="pb-2 font-medium">Item</th>
                 <th className="pb-2 font-medium">Note</th>
                 <th className="pb-2 text-right font-medium">Amount</th>
-                <th className="pb-2 w-10"></th>
+                <th className="pb-2 w-16"></th>
               </tr>
             </thead>
             <tbody>
@@ -87,7 +89,12 @@ export default function Transactions() {
                   <td className="py-2 font-medium">{subCat[t.subcategory_id]} › {subName[t.subcategory_id]}</td>
                   <td className="py-2 text-muted">{t.note || "—"}</td>
                   <td className="num py-2 text-right font-medium">{moneyCompact(t.amount)}</td>
-                  <td className="py-2 text-right"><button className="text-muted hover:text-neg" onClick={() => remove.mutate(t.id)}><Trash2 size={15} /></button></td>
+                  <td className="py-2 text-right">
+                    <span className="flex items-center justify-end gap-2.5">
+                      <button className="text-muted hover:text-accent2" onClick={() => setEditing(t)}><Pencil size={15} /></button>
+                      <button className="text-muted hover:text-neg" onClick={() => remove.mutate(t.id)}><Trash2 size={15} /></button>
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -106,6 +113,7 @@ export default function Transactions() {
                   {t.note && <div className="line-clamp-2 text-[11.5px] font-medium text-dim">{t.note}</div>}
                 </div>
                 <span className="num text-[15px] font-extrabold">{moneyCompact(t.amount)}</span>
+                <button className="text-faint hover:text-accent2" onClick={() => setEditing(t)}><Pencil size={15} /></button>
                 <button className="text-faint hover:text-neg" onClick={() => remove.mutate(t.id)}><Trash2 size={15} /></button>
               </div>
             ))}
@@ -115,6 +123,7 @@ export default function Transactions() {
       </Card>
 
       <AddExpenseSheet open={addOpen} onClose={() => setAddOpen(false)} />
+      {editing && <EditTransactionSheet txn={editing} year={year} onClose={() => setEditing(null)} />}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Plus, Trash2, RotateCw } from "lucide-react";
+import { Plus, Trash2, Pencil, RotateCw } from "lucide-react";
 import { useApp } from "../lib/AppContext";
 import {
   useMonth, useBudgetMutations, useTransactions, useTransactionMutations,
@@ -9,7 +9,8 @@ import { money, moneyCompact, sectionColor, MONTH_NAMES, defaultTxnDate } from "
 import {
   Card, EditableNumber, ProgressBar, Sheet, Button, Input, DateField,
 } from "../components/ui";
-import type { MonthItem, MonthSection } from "../types/api";
+import EditTransactionSheet from "../components/EditTransactionSheet";
+import type { MonthItem, MonthSection, Transaction } from "../types/api";
 
 const remTone = (it: MonthItem) => (it.remaining < 0 ? "var(--neg)" : "var(--pos)");
 
@@ -29,6 +30,7 @@ function TransactionDrawer({ year, month, section, sub, onClose }: TransactionDr
   const [txnDate, setTxnDate] = useState(() => defaultTxnDate(year, month));
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [editing, setEditing] = useState<Transaction | null>(null);
   const tone = remTone(sub);
   const barPct = sub.available > 0 ? Math.min(sub.spent / sub.available, 1) * 100 : sub.spent > 0 ? 100 : 0;
 
@@ -98,6 +100,7 @@ function TransactionDrawer({ year, month, section, sub, onClose }: TransactionDr
                 </div>
                 <span className="flex items-center gap-2.5">
                   <span className="num text-[13.5px] font-extrabold">{money(t.amount)}</span>
+                  <button className="text-faint hover:text-accent2" onClick={() => setEditing(t)}><Pencil size={15} /></button>
                   <button className="text-faint hover:text-neg" onClick={() => remove.mutate(t.id)}><Trash2 size={15} /></button>
                 </span>
               </div>
@@ -105,6 +108,7 @@ function TransactionDrawer({ year, month, section, sub, onClose }: TransactionDr
           </div>
         </>
       )}
+      {editing && <EditTransactionSheet txn={editing} year={year} onClose={() => setEditing(null)} />}
     </Sheet>
   );
 }
