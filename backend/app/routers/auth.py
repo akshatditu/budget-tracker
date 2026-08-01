@@ -3,7 +3,8 @@
 The browser hits `/api/auth/login`, bounces through Google, and returns to
 `/api/auth/callback`. On success we store the user's email in a signed session
 cookie (Starlette SessionMiddleware); `get_current_user` reads it on every request.
-Any Google account with a verified email is allowed.
+Sign-in is gated to `settings.allowed_email_list`; an empty allowlist lets any
+Google account with a verified email in.
 """
 from authlib.integrations.starlette_client import OAuth, OAuthError
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -44,6 +45,11 @@ async def callback(request: Request, db: Session = Depends(get_db)):
     email = (userinfo.get("email") or "").lower()
     if not email or not userinfo.get("email_verified"):
         raise HTTPException(status_code=401, detail="No verified email from Google")
+
+    # Empty allowlist = open sign-up; otherwise only listed emails get in.
+    allowed = settings.allowed_email_list
+    if allowed and email not in allowed:
+        raise HTTPException(status_code=403, detail="This account is not allowed to sign in")
 
     # Upsert: reuse the existing single-user row if its email already matches.
     user = db.scalars(select(User).where(User.email == email)).first()

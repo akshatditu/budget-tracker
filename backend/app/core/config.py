@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     frontend_url: str = "/"
     # Comma-separated allowlist of Google emails permitted to sign in.
     # Add friends'/family members' Google emails here (comma-separated) to let them in.
-    allowed_emails: str = "akshatav56@gmail.com"
+    allowed_emails: str = ""
     # Fernet key (base64) used to encrypt money values at rest. The DB never stores
     # plaintext amounts and never holds this key — it lives only in the server env.
     # Generate with:

@@ -20,5 +20,5 @@ services:
         sync: false
       - key: SECRET_KEY            # session cookie signing key
         generateValue: true
-      - key: ALLOWED_EMAILS
-        value: akshatav56@gmail.com
+      - key: ALLOWED_EMAILS      # comma-separated sign-in allowlist
+        sync: false

@@ -2,6 +2,7 @@
 
 Idempotent: re-running won't duplicate rows. Run with `python -m app.seed`.
 """
+import os
 from datetime import date
 
 from sqlalchemy import select
@@ -10,19 +11,24 @@ from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.models import BudgetYear, Category, Subcategory, User
 
-DEFAULT_USER = {"email": "akshatav56@gmail.com", "display_name": "Akshat", "currency": "INR"}
+# Override with SEED_EMAIL to seed a different local user.
+DEFAULT_USER = {
+    "email": os.environ.get("SEED_EMAIL", "demo@example.com"),
+    "display_name": "Demo",
+    "currency": "INR",
+}
 
-# Default structure derived from the user's Excel. Editable in the UI afterwards.
+# Starter structure. Editable in the UI afterwards.
 STRUCTURE: dict[str, list[str]] = {
     "Bills": [
-        "Term Insurance", "Bike+Car Insurance", "Phone/Wifi Bill", "OTT+Subscriptions",
-        "Gym+Protein", "Auto Maintenance", "Rent + Electricity",
+        "Term Insurance", "Vehicle Insurance", "Phone/Wifi Bill", "OTT+Subscriptions",
+        "Gym+Fitness", "Auto Maintenance", "Rent + Electricity",
     ],
     "Needs": [
-        "Personal Care", "Clothing", "Fuel+Fastag", "Grocery", "Medicine", "Dog Food",
+        "Personal Care", "Clothing", "Fuel+Fastag", "Grocery", "Medicine", "Household",
     ],
-    "Wants": ["Miscellaneous", "Going Out/Gifts", "Trips", "Swiggy/Zomato"],
-    "Investments": ["SIPs", "Anjali Study", "Car"],
+    "Wants": ["Miscellaneous", "Going Out/Gifts", "Trips", "Food Delivery"],
+    "Investments": ["SIPs", "Education Fund", "Vehicle"],
 }
 
 # Sections whose money is retained wealth (invested), never shown as spent.
