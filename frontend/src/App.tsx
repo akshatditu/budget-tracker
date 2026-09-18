@@ -16,7 +16,7 @@ import Transactions from "./pages/Transactions";
 import Income from "./pages/Income";
 import NetWorth from "./pages/NetWorth";
 import Goals from "./pages/Goals";
-import Subscriptions from "./pages/Subscriptions";
+import Recurring from "./pages/Recurring";
 import Reconciliation from "./pages/Reconciliation";
 import Guide from "./pages/Guide";
 import Settings from "./pages/Settings";
@@ -36,7 +36,8 @@ function DashboardApp({ user }: { user: User }) {
           <Route path="/rollup" element={<AnnualRollup />} />
           <Route path="/setup" element={<BudgetSetup />} />
           <Route path="/transactions" element={<Transactions />} />
-          <Route path="/subscriptions" element={<Subscriptions />} />
+          <Route path="/recurring" element={<Recurring />} />
+          <Route path="/subscriptions" element={<Navigate to="/dashboard/recurring" replace />} />
           <Route path="/income" element={<Income />} />
           <Route path="/assets" element={<NetWorth />} />
           <Route path="/goals" element={<Goals />} />

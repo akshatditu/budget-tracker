@@ -183,6 +183,8 @@ class Subscription(Base):
     name: Mapped[str] = mapped_column(String(120))
     amount: Mapped[float] = mapped_column(MONEY)
     frequency: Mapped[str] = mapped_column(String(20))  # weekly|monthly|quarterly|semiannual|yearly
+    # subscription|insurance|bill|emi|investment — groups the Recurring page; no effect on posting.
+    kind: Mapped[str] = mapped_column(String(20), default="subscription", server_default="subscription")
     start_date: Mapped[date] = mapped_column(Date)
     next_due_date: Mapped[date] = mapped_column(Date, index=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)

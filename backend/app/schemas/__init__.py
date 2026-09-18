@@ -319,10 +319,12 @@ class AssetHoldingOut(ORMModel):
 # ---- Subscriptions / recurring payments ----
 # next_due_date is derived server-side (first occurrence on/after today), never sent.
 Frequency = Literal["weekly", "monthly", "quarterly", "semiannual", "yearly"]
+Kind = Literal["subscription", "insurance", "bill", "emi", "investment"]
 
 
 class SubscriptionCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
+    kind: Kind = "subscription"
     subcategory_id: int
     amount: float = Field(gt=0)
     frequency: Frequency
@@ -332,6 +334,7 @@ class SubscriptionCreate(BaseModel):
 
 class SubscriptionUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    kind: Optional[Kind] = None
     subcategory_id: Optional[int] = None
     amount: Optional[float] = Field(default=None, gt=0)
     frequency: Optional[Frequency] = None
@@ -343,6 +346,7 @@ class SubscriptionUpdate(BaseModel):
 class SubscriptionOut(ORMModel):
     id: int
     name: str
+    kind: Kind
     subcategory_id: int
     amount: float
     frequency: Frequency
@@ -355,6 +359,7 @@ class SubscriptionOut(ORMModel):
 class UpcomingChargeOut(BaseModel):
     subscription_id: int
     name: str
+    kind: Kind
     subcategory_id: int
     amount: float
     due_date: date

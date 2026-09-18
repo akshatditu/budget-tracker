@@ -28,7 +28,7 @@ const NAV: NavItem[] = [
   { to: "/dashboard/rollup", label: "Annual Rollup", icon: TableProperties },
   { to: "/dashboard/setup", label: "Budget Setup", icon: SlidersHorizontal, tour: "nav-setup" },
   { to: "/dashboard/transactions", label: "Transactions", icon: Receipt, tour: "nav-transactions" },
-  { to: "/dashboard/subscriptions", label: "Subscriptions", icon: Repeat },
+  { to: "/dashboard/recurring", label: "Recurring", icon: Repeat },
   { to: "/dashboard/income", label: "Income", icon: Wallet, tour: "nav-income" },
   { to: "/dashboard/assets", label: "Net Worth", icon: TrendingUp },
   { to: "/dashboard/goals", label: "Goals", icon: Target },
@@ -240,7 +240,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   const { data: user } = useAuth();
 
-  useSubscriptionSync(); // post any subscription charges that fell due since the last visit
+  useSubscriptionSync(); // post any recurring charges that fell due since the last visit
 
   useEffect(() => setDrawerOpen(false), [pathname]);
 

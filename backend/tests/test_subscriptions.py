@@ -177,3 +177,16 @@ def test_user_scoping(env):
         "frequency": "monthly", "start_date": "2026-05-01",
     })
     assert r.status_code == 404
+
+
+def test_kind_defaults_and_round_trips(env):
+    client, _, _, _, subcat = env
+    base = {"subcategory_id": subcat.id, "amount": 100, "frequency": "yearly", "start_date": date.today().isoformat()}
+    assert client.post("/api/subscriptions", json={**base, "name": "Netflix"}).json()["kind"] == "subscription"
+    r = client.post("/api/subscriptions", json={**base, "name": "Term plan", "kind": "insurance"})
+    assert r.status_code == 201 and r.json()["kind"] == "insurance"
+    assert {s["name"]: s["kind"] for s in client.get("/api/subscriptions").json()}["Term plan"] == "insurance"
+    today = date.today()
+    upcoming = client.get("/api/subscriptions/upcoming", params={"year": today.year, "month": today.month}).json()
+    assert {c["name"]: c["kind"] for c in upcoming}["Term plan"] == "insurance"
+    assert client.post("/api/subscriptions", json={**base, "name": "X", "kind": "gym"}).status_code == 422

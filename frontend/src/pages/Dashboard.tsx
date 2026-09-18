@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, TrendingDown, TrendingUp } from "lucide-react";
 import { useApp } from "../lib/AppContext";
-import { useDashboard, useMonth, useUpcomingCharges } from "../api/hooks";
+import { useDashboard, useMonth, useSubscriptions, useUpcomingCharges } from "../api/hooks";
+import { kindMeta, renewsSoon } from "../lib/recurring";
 import { money, moneyCompact, pct, sectionColor, MONTH_NAMES, MONTH_SHORT } from "../lib/format";
 import { ProgressBar, StatusChip } from "../components/ui";
 import { CashTrajectoryChart, MonthlyTrendChart, SavingsRateSparkline } from "../components/charts";
@@ -20,6 +21,11 @@ export default function Dashboard() {
   const currentMonth = now.getMonth() + 1;
   const { data: mv } = useMonth(year, isCurrentYear ? currentMonth : 0);
   const { data: upcoming = [] } = useUpcomingCharges(year, isCurrentYear ? currentMonth : 0);
+  const { data: recurring = [] } = useSubscriptions();
+  // Big half-yearly/yearly charges due soon, unless already listed in this month's upcoming.
+  const renewals = isCurrentYear
+    ? recurring.filter((s) => renewsSoon(s) && !upcoming.some((c) => c.subscription_id === s.id))
+    : [];
 
   if (isLoading) return <p className="text-sm text-dim">Loading…</p>;
   if (isError || !data) return <p className="text-sm text-dim">No budget data found for {year}.</p>;
@@ -265,13 +271,14 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Upcoming this month — subscription charges still to auto-post */}
-      {upcoming.length > 0 && (
+      {/* Upcoming this month — recurring charges still to auto-post, plus big renewals ahead */}
+      {(upcoming.length > 0 || renewals.length > 0) && (
         <div className={card}>
           <div className="mb-3.5 flex items-baseline justify-between">
-            <Link to="/dashboard/subscriptions" className="text-[15px] font-extrabold tracking-tight">Upcoming this month</Link>
-            <span className="num text-[12px] font-bold text-dim">{money(upcoming.reduce((s, c) => s + c.amount, 0))}</span>
+            <Link to="/dashboard/recurring" className="text-[15px] font-extrabold tracking-tight">Upcoming this month</Link>
+            {upcoming.length > 0 && <span className="num text-[12px] font-bold text-dim">{money(upcoming.reduce((s, c) => s + c.amount, 0))}</span>}
           </div>
+          {upcoming.length === 0 && <p className="text-[13px] text-dim">Nothing else due this month.</p>}
           <div className="flex flex-col gap-2.5">
             {upcoming.map((c) => (
               <div key={`${c.subscription_id}-${c.due_date}`} className="flex items-center justify-between gap-3">
@@ -283,6 +290,23 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+          {renewals.length > 0 && (
+            <>
+              <div className="mb-2.5 mt-4 text-[12px] font-bold uppercase tracking-[.05em] text-dim">Renewals in the next 30 days</div>
+              <div className="flex flex-col gap-2.5">
+                {renewals.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between gap-3">
+                    <span className="flex min-w-0 items-center gap-2.5 text-[13px] font-semibold">
+                      <span className="num w-12 shrink-0 text-[12px] font-bold text-dim">{Number(s.next_due_date.slice(8))} {MONTH_SHORT[Number(s.next_due_date.slice(5, 7)) - 1]}</span>
+                      <span className="truncate">{s.name}</span>
+                      <span className="pill pill-warn shrink-0">{kindMeta(s.kind).label}</span>
+                    </span>
+                    <span className="num shrink-0 text-[13px] font-bold">{money(s.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 

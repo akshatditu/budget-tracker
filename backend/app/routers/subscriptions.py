@@ -102,7 +102,7 @@ def upcoming_charges(
         select(Subscription).where(Subscription.user_id == user.id, Subscription.active.is_(True))
     ).all()
     out = [
-        UpcomingChargeOut(subscription_id=s.id, name=s.name, subcategory_id=s.subcategory_id, amount=s.amount, due_date=d)
+        UpcomingChargeOut(subscription_id=s.id, name=s.name, kind=s.kind, subcategory_id=s.subcategory_id, amount=s.amount, due_date=d)
         for s in subs
         for d in svc.occurrences_between(s, start, end)
     ]

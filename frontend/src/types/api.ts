@@ -516,10 +516,12 @@ export interface AssetHoldingUpdate {
 
 // ---- Subscriptions / recurring payments ----
 export type Frequency = "weekly" | "monthly" | "quarterly" | "semiannual" | "yearly";
+export type SubscriptionKind = "subscription" | "insurance" | "bill" | "emi" | "investment";
 
 export interface Subscription {
   id: number;
   name: string;
+  kind: SubscriptionKind;
   subcategory_id: number;
   amount: number;
   frequency: Frequency;
@@ -533,6 +535,7 @@ export interface Subscription {
 
 export interface SubscriptionCreate {
   name: string;
+  kind?: SubscriptionKind;
   subcategory_id: number;
   amount: number;
   frequency: Frequency;
@@ -548,6 +551,7 @@ export interface SubscriptionUpdate extends Partial<SubscriptionCreate> {
 export interface UpcomingCharge {
   subscription_id: number;
   name: string;
+  kind: SubscriptionKind;
   subcategory_id: number;
   amount: number;
   due_date: string;
