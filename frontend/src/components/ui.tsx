@@ -274,8 +274,8 @@ interface DateFieldProps {
 export function DateField({ value, onChange, min, max, className = "" }: DateFieldProps) {
   const [open, setOpen] = useState(false);
   // Fixed viewport coords so the calendar escapes the bottom-sheet's overflow
-  // clipping; anchored to sit *above* the trigger.
-  const [coords, setCoords] = useState<{ left: number; bottom: number } | null>(null);
+  // clipping; sits *above* the trigger, flipping below when there isn't room above.
+  const [coords, setCoords] = useState<{ left: number; top?: number; bottom?: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -290,10 +290,9 @@ export function DateField({ value, onChange, min, max, className = "" }: DateFie
     const r = ref.current?.getBoundingClientRect();
     if (r) {
       const width = 300;
-      setCoords({
-        left: Math.max(8, Math.min(r.left, window.innerWidth - width - 8)),
-        bottom: window.innerHeight - r.top + 6,
-      });
+      const height = 360; // approx. calendar popover height
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8));
+      setCoords(r.top >= height + 8 ? { left, bottom: window.innerHeight - r.top + 6 } : { left, top: r.bottom + 6 });
     }
     setOpen(true);
   };
@@ -316,7 +315,7 @@ export function DateField({ value, onChange, min, max, className = "" }: DateFie
       {open && coords && (
         <div
           className="fixed z-[100] w-max rounded-[var(--radiusSm)] border border-line bg-surface p-2 shadow-[var(--shadow)]"
-          style={{ left: coords.left, bottom: coords.bottom }}
+          style={coords}
         >
           <DayPicker
             className="bt-daypicker"
