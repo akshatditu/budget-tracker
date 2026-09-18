@@ -2,14 +2,14 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, CalendarDays, TableProperties, SlidersHorizontal,
   Receipt, Wallet, TrendingUp, Target, Scale, BookOpen, Settings as SettingsIcon, ChevronLeft, ChevronRight,
-  X, LogOut, Moon, Sun, Plus, Home, BarChart3, MoreHorizontal, type LucideIcon,
+  X, LogOut, Moon, Sun, Plus, Home, BarChart3, MoreHorizontal, Repeat, type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useApp } from "../lib/AppContext";
 import { useTheme } from "../lib/theme";
 import AddExpenseSheet from "./AddExpenseSheet";
 import { useAuth, logout } from "../lib/auth";
-import { useYears, useCreateYear } from "../api/hooks";
+import { useYears, useCreateYear, useSubscriptionSync } from "../api/hooks";
 import { MONTH_NAMES, MONTH_SHORT } from "../lib/format";
 import { startTour, tourSeenKey } from "../lib/tour";
 import { BudgetIQIcon } from "./Logo";
@@ -28,6 +28,7 @@ const NAV: NavItem[] = [
   { to: "/dashboard/rollup", label: "Annual Rollup", icon: TableProperties },
   { to: "/dashboard/setup", label: "Budget Setup", icon: SlidersHorizontal, tour: "nav-setup" },
   { to: "/dashboard/transactions", label: "Transactions", icon: Receipt, tour: "nav-transactions" },
+  { to: "/dashboard/subscriptions", label: "Subscriptions", icon: Repeat },
   { to: "/dashboard/income", label: "Income", icon: Wallet, tour: "nav-income" },
   { to: "/dashboard/assets", label: "Net Worth", icon: TrendingUp },
   { to: "/dashboard/goals", label: "Goals", icon: Target },
@@ -238,6 +239,8 @@ export default function Layout({ children }: { children: ReactNode }) {
   const [addOpen, setAddOpen] = useState(false);
   const { pathname } = useLocation();
   const { data: user } = useAuth();
+
+  useSubscriptionSync(); // post any subscription charges that fell due since the last visit
 
   useEffect(() => setDrawerOpen(false), [pathname]);
 

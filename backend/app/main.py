@@ -17,6 +17,7 @@ from app.routers import (
     onboarding,
     reconciliation,
     revision,
+    subscriptions,
     transactions,
     views,
     years,
@@ -52,6 +53,7 @@ app.include_router(catalog.router)
 app.include_router(budgets.router)
 app.include_router(revision.router)
 app.include_router(transactions.router)
+app.include_router(subscriptions.router)
 app.include_router(incomes.router)
 app.include_router(goals.router)
 app.include_router(reconciliation.router)
