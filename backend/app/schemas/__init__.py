@@ -3,7 +3,7 @@ frontend contract (stored as Numeric server-side)."""
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -189,6 +189,7 @@ class TransactionOut(ORMModel):
     txn_date: date
     amount: float
     note: Optional[str]
+    subscription_id: Optional[int] = None
 
 
 # ---- Income ----
@@ -313,3 +314,47 @@ class AssetHoldingOut(ORMModel):
     name: Optional[str]
     amount: float
     as_of_date: date
+
+
+# ---- Subscriptions / recurring payments ----
+# next_due_date is derived server-side (first occurrence on/after today), never sent.
+Frequency = Literal["weekly", "monthly", "quarterly", "semiannual", "yearly"]
+
+
+class SubscriptionCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    subcategory_id: int
+    amount: float = Field(gt=0)
+    frequency: Frequency
+    start_date: date
+    end_date: Optional[date] = None
+
+
+class SubscriptionUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    subcategory_id: Optional[int] = None
+    amount: Optional[float] = Field(default=None, gt=0)
+    frequency: Optional[Frequency] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    active: Optional[bool] = None
+
+
+class SubscriptionOut(ORMModel):
+    id: int
+    name: str
+    subcategory_id: int
+    amount: float
+    frequency: Frequency
+    start_date: date
+    next_due_date: date
+    end_date: Optional[date]
+    active: bool
+
+
+class UpcomingChargeOut(BaseModel):
+    subscription_id: int
+    name: str
+    subcategory_id: int
+    amount: float
+    due_date: date

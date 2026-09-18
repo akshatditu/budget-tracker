@@ -87,7 +87,7 @@ export default function Transactions() {
                 <tr key={t.id} className="border-t border-line">
                   <td className="py-2 text-muted">{t.txn_date}</td>
                   <td className="py-2 font-medium">{subCat[t.subcategory_id]} › {subName[t.subcategory_id]}</td>
-                  <td className="py-2 text-muted">{t.note || "—"}</td>
+                  <td className="py-2 text-muted">{t.note || "—"}{t.subscription_id != null && <span className="pill pill-accent ml-2">Auto</span>}</td>
                   <td className="num py-2 text-right font-medium">{moneyCompact(t.amount)}</td>
                   <td className="py-2 text-right">
                     <span className="flex items-center justify-end gap-2.5">
@@ -111,6 +111,7 @@ export default function Transactions() {
                   <div className="truncate text-sm font-bold">{subName[t.subcategory_id]}</div>
                   <div className="text-[11.5px] font-medium text-dim">{t.txn_date}{t.note ? "" : ` · ${subCat[t.subcategory_id]}`}</div>
                   {t.note && <div className="line-clamp-2 text-[11.5px] font-medium text-dim">{t.note}</div>}
+                  {t.subscription_id != null && <span className="pill pill-accent mt-1 inline-block">Auto</span>}
                 </div>
                 <span className="num text-[15px] font-extrabold">{moneyCompact(t.amount)}</span>
                 <button className="text-faint hover:text-accent2" onClick={() => setEditing(t)}><Pencil size={15} /></button>

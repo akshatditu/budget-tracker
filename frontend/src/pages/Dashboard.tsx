@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, TrendingDown, TrendingUp } from "lucide-react";
 import { useApp } from "../lib/AppContext";
-import { useDashboard, useMonth } from "../api/hooks";
-import { money, moneyCompact, pct, sectionColor, MONTH_NAMES } from "../lib/format";
+import { useDashboard, useMonth, useUpcomingCharges } from "../api/hooks";
+import { money, moneyCompact, pct, sectionColor, MONTH_NAMES, MONTH_SHORT } from "../lib/format";
 import { ProgressBar, StatusChip } from "../components/ui";
 import { CashTrajectoryChart, MonthlyTrendChart, SavingsRateSparkline } from "../components/charts";
 import RegenerateBudget from "../components/RegenerateBudget";
@@ -19,6 +19,7 @@ export default function Dashboard() {
   const isCurrentYear = year === now.getFullYear();
   const currentMonth = now.getMonth() + 1;
   const { data: mv } = useMonth(year, isCurrentYear ? currentMonth : 0);
+  const { data: upcoming = [] } = useUpcomingCharges(year, isCurrentYear ? currentMonth : 0);
 
   if (isLoading) return <p className="text-sm text-dim">Loading…</p>;
   if (isError || !data) return <p className="text-sm text-dim">No budget data found for {year}.</p>;
@@ -263,6 +264,27 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Upcoming this month — subscription charges still to auto-post */}
+      {upcoming.length > 0 && (
+        <div className={card}>
+          <div className="mb-3.5 flex items-baseline justify-between">
+            <Link to="/dashboard/subscriptions" className="text-[15px] font-extrabold tracking-tight">Upcoming this month</Link>
+            <span className="num text-[12px] font-bold text-dim">{money(upcoming.reduce((s, c) => s + c.amount, 0))}</span>
+          </div>
+          <div className="flex flex-col gap-2.5">
+            {upcoming.map((c) => (
+              <div key={`${c.subscription_id}-${c.due_date}`} className="flex items-center justify-between gap-3">
+                <span className="flex min-w-0 items-center gap-2.5 text-[13px] font-semibold">
+                  <span className="num w-12 shrink-0 text-[12px] font-bold text-dim">{Number(c.due_date.slice(8))} {MONTH_SHORT[currentMonth - 1]}</span>
+                  <span className="truncate">{c.name}</span>
+                </span>
+                <span className="num shrink-0 text-[13px] font-bold">{money(c.amount)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* This year — spent vs invested, per month */}
       <div className={card}>

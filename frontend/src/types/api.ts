@@ -195,6 +195,8 @@ export interface Transaction {
   txn_date: string;
   amount: number;
   note: string | null;
+  /** Set when auto-posted by a subscription. */
+  subscription_id?: number | null;
 }
 
 export interface TransactionCreate {
@@ -510,6 +512,45 @@ export interface AssetHoldingUpdate {
   category?: string;
   name?: string | null;
   amount?: number;
+}
+
+// ---- Subscriptions / recurring payments ----
+export type Frequency = "weekly" | "monthly" | "quarterly" | "semiannual" | "yearly";
+
+export interface Subscription {
+  id: number;
+  name: string;
+  subcategory_id: number;
+  amount: number;
+  frequency: Frequency;
+  /** ISO date anchoring the schedule (deduction day of month / weekday). */
+  start_date: string;
+  /** Next date the charge will be auto-posted. Server-derived. */
+  next_due_date: string;
+  end_date: string | null;
+  active: boolean;
+}
+
+export interface SubscriptionCreate {
+  name: string;
+  subcategory_id: number;
+  amount: number;
+  frequency: Frequency;
+  start_date: string;
+  end_date?: string | null;
+}
+
+export interface SubscriptionUpdate extends Partial<SubscriptionCreate> {
+  id: number;
+  active?: boolean;
+}
+
+export interface UpcomingCharge {
+  subscription_id: number;
+  name: string;
+  subcategory_id: number;
+  amount: number;
+  due_date: string;
 }
 
 // ---- Dashboard ----

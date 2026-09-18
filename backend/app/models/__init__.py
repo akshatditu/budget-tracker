@@ -163,6 +163,30 @@ class Transaction(Base):
     txn_date: Mapped[date] = mapped_column(Date, index=True)
     amount: Mapped[float] = mapped_column(MONEY)
     note: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Set when the row was auto-posted by a Subscription; history survives its deletion.
+    subscription_id: Mapped[int | None] = mapped_column(
+        ForeignKey("subscriptions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Subscription(Base):
+    """A recurring payment (Netflix, phone bill, SIP, ...). On each due date a Transaction
+    is auto-posted by services/subscriptions.post_due. `start_date` anchors the schedule
+    (day of month / weekday); `next_due_date` is the posting cursor."""
+
+    __tablename__ = "subscriptions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    subcategory_id: Mapped[int] = mapped_column(ForeignKey("subcategories.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    amount: Mapped[float] = mapped_column(MONEY)
+    frequency: Mapped[str] = mapped_column(String(20))  # weekly|monthly|quarterly|semiannual|yearly
+    start_date: Mapped[date] = mapped_column(Date)
+    next_due_date: Mapped[date] = mapped_column(Date, index=True)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

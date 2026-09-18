@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { api } from "../lib/api";
 import type {
   AnnualBudgetRow,
@@ -36,6 +37,9 @@ import type {
   RevisionGeneratePayload,
   Rollup,
   Subcategory,
+  Subscription,
+  SubscriptionCreate,
+  SubscriptionUpdate,
   SubcategoryCreate,
   SubcategoryUpdate,
   SubcatUnspent,
@@ -43,6 +47,7 @@ import type {
   TransactionCreate,
   TransactionFilter,
   TransactionUpdate,
+  UpcomingCharge,
   User,
   UserUpdate,
   Year,
@@ -427,3 +432,53 @@ export const useRollup = (year: number) =>
   useQuery({ queryKey: ["rollup", year], queryFn: () => get<Rollup>(`/years/${year}/rollup`), enabled: !!year });
 export const useDashboard = (year: number) =>
   useQuery({ queryKey: ["dashboard", year], queryFn: () => get<Dashboard>(`/years/${year}/dashboard`), enabled: !!year });
+
+// ---- subscriptions / recurring payments ----
+// User-scoped (they span years), so no year in the key.
+export const useSubscriptions = () =>
+  useQuery({ queryKey: ["subscriptions"], queryFn: () => get<Subscription[]>("/subscriptions") });
+
+export const useUpcomingCharges = (year: number, month: number) =>
+  useQuery({
+    queryKey: ["subscriptions-upcoming", year, month],
+    queryFn: () => get<UpcomingCharge[]>("/subscriptions/upcoming", { year, month }),
+    enabled: !!year && !!month,
+  });
+
+export const useSubscriptionMutations = () => {
+  const qc = useQueryClient();
+  const done = () => {
+    qc.invalidateQueries({ queryKey: ["subscriptions"] });
+    qc.invalidateQueries({ queryKey: ["subscriptions-upcoming"] });
+  };
+  return {
+    create: useMutation({
+      mutationFn: (b: SubscriptionCreate) => api.post<Subscription>("/subscriptions", b),
+      onSuccess: done,
+    }),
+    update: useMutation({
+      mutationFn: ({ id, ...b }: SubscriptionUpdate) => api.patch<Subscription>(`/subscriptions/${id}`, b),
+      onSuccess: done,
+    }),
+    remove: useMutation({
+      mutationFn: (id: number) => api.delete<void>(`/subscriptions/${id}`),
+      onSuccess: done,
+    }),
+  };
+};
+
+/** Posts any due subscription charges to the ledger. Fired once when the app shell
+ *  mounts; when something was posted, every view derived from transactions refreshes. */
+export const useSubscriptionSync = () => {
+  const qc = useQueryClient();
+  const { mutate } = useMutation({
+    mutationFn: () => api.post<{ posted: number }>("/subscriptions/sync").then((r) => r.data),
+    onSuccess: ({ posted }) => {
+      if (!posted) return;
+      ["transactions", "month", "rollup", "dashboard", "subscriptions", "subscriptions-upcoming"].forEach((k) =>
+        qc.invalidateQueries({ queryKey: [k] })
+      );
+    },
+  });
+  useEffect(() => mutate(), [mutate]);
+};
