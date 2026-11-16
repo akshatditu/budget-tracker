@@ -7,7 +7,7 @@ import type { CategoryKind, Rollup, RollupItem } from "../types/api";
    per-sub-item chart with a detail panel. Every figure comes from the existing rollup
    payload (sections[].items[] + totals); status buckets are derived client-side. */
 
-type Status = "over" | "committed" | "ok";
+type Status = "over" | "pace" | "ok";
 type CatFilter = "all" | string;
 type StatusFilter = "all" | Status;
 type Tab = "bva" | "overspend" | "setaside";
@@ -18,18 +18,43 @@ interface Row extends RollupItem {
   section: string;
   kind: CategoryKind;
   status: Status;
+  /** Spend beyond the elapsed months' budget while still within the annual budget. */
+  pace_gap: number;
 }
 
 const STATUS_META: Record<Status, { label: string; color: string }> = {
   over: { label: "Over budget", color: "var(--neg)" },
-  committed: { label: "Over-committed", color: "var(--warn)" },
+  pace: { label: "Ahead of pace", color: "var(--warn)" },
   ok: { label: "On track", color: "var(--pos)" },
 };
 
-/** Over budget: spent past the revised budget. Over-committed: spent fits, but spent +
- *  set aside doesn't (remaining < 0). On track: everything else. */
-const statusOf = (it: RollupItem): Status =>
-  it.spent > it.revised ? "over" : it.remaining < 0 ? "committed" : "ok";
+/** Annual view of one sub-item, judged against the whole-year revised budget:
+ *  - over budget (spent > revised): overspent = spent − revised, nothing is set aside,
+ *    remaining = revised − spent (negative).
+ *  - otherwise: set aside = elapsed months' unspent budget net of any month that went
+ *    over (the API's set_aside − overspent, floored at 0); remaining = revised − spent −
+ *    set aside, i.e. the budget still ahead for the coming months.
+ *  The API's per-month set_aside/overspent aren't netted against each other, which made
+ *  an over-budget item show both a big set aside and an inflated negative remaining. */
+const annualize = (it: RollupItem, section: string, kind: CategoryKind): Row => {
+  const elapsedSlack = it.set_aside - it.overspent; // elapsed revised − elapsed spent
+  const over = it.spent > it.revised;
+  const overspent = over ? it.spent - it.revised : 0;
+  const set_aside = over ? 0 : Math.max(0, Math.min(elapsedSlack, it.revised - it.spent));
+  const pace_gap = over ? 0 : Math.max(0, -elapsedSlack);
+  return {
+    ...it,
+    section,
+    kind,
+    overspent,
+    set_aside,
+    available: set_aside - overspent,
+    current: it.spent + set_aside,
+    remaining: it.revised - it.spent - set_aside,
+    pace_gap,
+    status: over ? "over" : pace_gap > 0 ? "pace" : "ok",
+  };
+};
 
 const ratio = (a: number, b: number) => (b > 0 ? a / b : 0);
 const pctLabel = (a: number, b: number) => (b > 0 ? `${Math.round((a / b) * 100)}%` : "—");
@@ -116,7 +141,7 @@ function Track({ segs, tick, h = 14 }: { segs: { from: number; to: number; color
 
 export default function SpendDeepDive({ data }: { data: Rollup }) {
   const all: Row[] = useMemo(
-    () => data.sections.flatMap((s) => s.items.map((it) => ({ ...it, section: s.name, kind: s.kind, status: statusOf(it) }))),
+    () => data.sections.flatMap((s) => s.items.map((it) => annualize(it, s.name, s.kind))),
     [data],
   );
   const [cat, setCat] = useState<CatFilter>("all");
@@ -402,7 +427,7 @@ function Overspend({ rows, scope, sel, onSelect }: ListProps) {
   return (
     <>
       <h3 className="mt-5 text-[16px] font-bold tracking-tight">Overspend by sub-item</h3>
-      <div className="mt-0.5 text-[12.5px] text-dim">{scope} · {over.length} of {rows.length} sub-items went over in at least one elapsed month</div>
+      <div className="mt-0.5 text-[12.5px] text-dim">{scope} · {over.length} of {rows.length} sub-items spent more than their revised budget</div>
       <SectionLegend rows={over} />
       {over.length === 0 ? (
         <div className="py-10 text-center text-sm text-dim">Nothing overspent here.</div>
@@ -470,11 +495,11 @@ function Detail({ row: r, idx, total, all, data, onStep }: { row: Row; idx: numb
   const word = spentWord(r.kind);
 
   const fundMsg =
-    r.overspent > r.set_aside
-      ? { tone: "neg", text: <>Overspending (<span className="num">{money(r.overspent)}</span>) has used up the <span className="num">{money(r.set_aside)}</span> set aside and is <span className="num">{money(r.overspent - r.set_aside)}</span> short.</> }
-      : r.overspent > 0
-        ? { tone: "warn", text: <>Overspending (<span className="num">{money(r.overspent)}</span>) has used part of the <span className="num">{money(r.set_aside)}</span> set aside; <span className="num">{money(r.available)}</span> is still available.</> }
-        : { tone: "pos", text: <>No overspend, so the full <span className="num">{money(r.set_aside)}</span> set aside is available.</> };
+    r.overspent > 0
+      ? { tone: "neg", text: <>{word === "spent" ? "Spent" : "Invested"} <span className="num">{money(r.overspent)}</span> more than the <span className="num">{money(r.revised)}</span> revised budget, so nothing is set aside.</> }
+      : r.pace_gap > 0
+        ? { tone: "warn", text: <>{word === "spent" ? "Spending" : "Investing"} is <span className="num">{money(r.pace_gap)}</span> ahead of the budget for the months so far, so nothing is set aside yet.</> }
+        : { tone: "pos", text: <><span className="num">{money(r.set_aside)}</span> of past months' budget went unspent and is set aside.</> };
 
   return (
     <div className={`${panelCls} p-5 xl:sticky xl:top-4`}>
@@ -498,8 +523,8 @@ function Detail({ row: r, idx, total, all, data, onStep }: { row: Row; idx: numb
       <div className="num text-[28px] font-bold tracking-tight" style={{ color: r.remaining < 0 ? "var(--neg)" : undefined }}>{money(r.remaining)}</div>
       <div className="mt-0.5 text-[12px] text-dim">
         {r.remaining < 0
-          ? <>{word === "spent" ? "Spent" : "Invested"} + set aside is <span className="num">{money(-r.remaining)}</span> more than the <span className="num">{money(r.revised)}</span> revised budget</>
-          : <><span className="num">{money(r.remaining)}</span> of the <span className="num">{money(r.revised)}</span> revised budget is still uncommitted</>}
+          ? <>{word === "spent" ? "Spent" : "Invested"} is <span className="num">{money(-r.remaining)}</span> more than the <span className="num">{money(r.revised)}</span> revised budget</>
+          : <><span className="num">{money(r.remaining)}</span> of the <span className="num">{money(r.revised)}</span> revised budget is left for the coming months</>}
       </div>
 
       <div className="mt-5 flex items-baseline justify-between">
@@ -514,7 +539,7 @@ function Detail({ row: r, idx, total, all, data, onStep }: { row: Row; idx: numb
 
       <div className="mt-4 flex items-baseline justify-between">
         <span className="text-[13.5px] font-bold">Set-aside fund</span>
-        <span className="text-[11px] text-dim">available = set aside − overspent</span>
+        <span className="text-[11px] text-dim">set aside = unspent budget of past months</span>
       </div>
       <DetailBar label="Set aside" value={r.set_aside} segs={[{ from: 0, to: r.set_aside / fundMax, color: soft(c, 40) }]} />
       <DetailBar label="Overspent" value={r.overspent} segs={[{ from: 0, to: r.overspent / fundMax, color: "var(--neg)" }]} />
