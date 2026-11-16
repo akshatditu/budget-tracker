@@ -321,7 +321,7 @@ function CategoryMix({ data, rows }: { data: Rollup; rows: Row[] }) {
   if (!secs.length) return null;
 
   return (
-    <div className={`${panelCls} grid grid-cols-1 gap-5 p-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]`}>
+    <div className={`${panelCls} space-y-4 p-5`}>
       <div>
         <h3 className="text-[16px] font-bold tracking-tight">Category mix</h3>
         <div className="mt-0.5 text-[12.5px] text-dim">Share of total outflow (spent + invested) · <span className="num">{money(outflow)}</span></div>
