@@ -3,6 +3,7 @@ import { useApp } from "../lib/AppContext";
 import { useRollup } from "../api/hooks";
 import { moneyCompact, pct, sectionColor } from "../lib/format";
 import { Card, StatusChip } from "../components/ui";
+import SpendDeepDive from "../components/SpendDeepDive";
 import type { Rollup, RollupSection } from "../types/api";
 
 const cardCls = "rounded-[var(--radius)] border border-line bg-surface p-[17px] shadow-[var(--shadow)]";
@@ -119,15 +120,35 @@ function Grid({ title, grid, monthNames, sections }: GridProps) {
 export default function AnnualRollup() {
   const { year } = useApp();
   const { data, isLoading } = useRollup(year);
+  const [view, setView] = useState<"charts" | "table">("charts");
   if (isLoading || !data) return <p className="text-sm text-muted">Loading…</p>;
 
   return (
     <div className="space-y-6">
-      <h1 className="hidden text-[26px] font-extrabold tracking-tight lg:block">{year} Annual Rollup</h1>
+      <div className="hidden items-end justify-between gap-4 lg:flex">
+        <div>
+          <div className="text-[11px] font-bold uppercase tracking-[.08em] text-dim">{year} · Annual rollup</div>
+          <h1 className="mt-1 text-[26px] font-extrabold tracking-tight">Spend deep dive</h1>
+          <p className="mt-1 text-[13px] text-dim">Revised budget vs spent, set aside and overspent, by category and sub-item for {year}.</p>
+        </div>
+        <div className="inline-flex shrink-0 rounded-[var(--radiusSm)] bg-surface2 p-1">
+          {(["charts", "table"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`rounded-[var(--radiusXs)] px-4 py-1.5 text-[13.5px] font-semibold capitalize ${view === v ? "bg-surface text-ink shadow-sm" : "text-dim hover:text-ink"}`}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="lg:hidden"><MobileRollup data={data} /></div>
 
-      <div className="hidden space-y-6 lg:block">
+      {view === "charts" && <div className="hidden lg:block"><SpendDeepDive data={data} /></div>}
+
+      <div className={`hidden space-y-6 ${view === "table" ? "lg:block" : ""}`}>
       <Grid title="Monthly Spend" grid={data.spend_grid} monthNames={data.month_names} sections={data.sections.filter(s => s.kind !== "investment")} />
       <Grid title="Monthly Budget (Revised)" grid={data.budget_grid} monthNames={data.month_names} sections={data.sections} />
 
