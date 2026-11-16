@@ -123,7 +123,7 @@ export default function Transactions() {
         )}
       </Card>
 
-      <AddExpenseSheet open={addOpen} onClose={() => setAddOpen(false)} />
+      <AddExpenseSheet open={addOpen} onClose={() => setAddOpen(false)} submitLabel="Add Transaction" />
       {editing && <EditTransactionSheet txn={editing} year={year} onClose={() => setEditing(null)} />}
     </div>
   );

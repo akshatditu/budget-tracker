@@ -10,7 +10,7 @@ import { DateField, Sheet } from "./ui";
  *   1. pick a group (category)  2. pick an item (subcategory) + amount + note.
  * Records against the first of the currently-selected month/year.
  */
-export default function AddExpenseSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function AddExpenseSheet({ open, onClose, submitLabel }: { open: boolean; onClose: () => void; submitLabel?: string }) {
   const { year, month } = useApp();
   const { data: categories = [] } = useCategories();
   const { data: subs = [] } = useSubcategories();
@@ -111,7 +111,7 @@ export default function AddExpenseSheet({ open, onClose }: { open: boolean; onCl
                 className="mt-3.5 w-full rounded-[var(--radiusSm)] py-4 text-[15px] font-extrabold text-white transition disabled:opacity-50"
                 style={{ background: "var(--accent)" }}
               >
-                {create.isPending ? "Adding…" : `Add to ${MONTH_NAMES[month - 1]}`}
+                {create.isPending ? "Adding…" : (submitLabel ?? `Add to ${MONTH_NAMES[month - 1]}`)}
               </button>
             </>
           )}
