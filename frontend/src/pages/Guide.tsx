@@ -311,7 +311,7 @@ export default function Guide() {
           <Term word="Safe to spend / day">Your leftover budget split over the days left in the month. {money(3000)} left with 10 days to go ⇒ {money(300)}/day.</Term>
         </dl>
 
-        <h3 className="pt-2 text-sm font-semibold text-muted">Words on the Annual Rollup screen</h3>
+        <h3 className="pt-2 text-sm font-semibold text-muted">Words on the Analytics screen</h3>
         <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Term word="Set Aside">Money you budgeted in past months but didn't spend — it's still yours, sitting aside. Planned {money(8000)}, spent {money(6500)} ⇒ {money(1500)} set aside.</Term>
           <Term word="Overspent">The opposite: where you spent more than planned in past months. Surfaced clearly so it can't hide.</Term>

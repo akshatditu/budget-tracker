@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { money, sectionColor } from "../lib/format";
 import type { CategoryKind, Rollup, RollupItem } from "../types/api";
 
@@ -139,7 +139,7 @@ function Track({ segs, tick, h = 14 }: { segs: { from: number; to: number; color
 
 // ───────────────────────────── main view ─────────────────────────────
 
-export default function SpendDeepDive({ data }: { data: Rollup }) {
+export default function SpendDeepDive({ data, view }: { data: Rollup; view: "charts" | "table" }) {
   const all: Row[] = useMemo(
     () => data.sections.flatMap((s) => s.items.map((it) => annualize(it, s.name, s.kind))),
     [data],
@@ -202,10 +202,12 @@ export default function SpendDeepDive({ data }: { data: Rollup }) {
         <Stat label="Remaining" value={money(t.remaining)} tone={t.remaining < 0 ? "var(--neg)" : undefined} sub="Revised − spent − set aside" />
       </div>
 
-      <CategoryMix data={data} rows={byStatus} />
+      {view === "charts" && <CategoryMix data={data} rows={byStatus} />}
 
       {rows.length === 0 ? (
         <div className={`${panelCls} p-10 text-center text-sm text-dim`}>No sub-items match these filters.</div>
+      ) : view === "table" ? (
+        <SubItemTable rows={sorted} totals={t} scope={scopeLabel} sort={sort} onSort={setSort} />
       ) : (
         <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
           <div className={`${panelCls} p-5`}>
@@ -228,6 +230,80 @@ export default function SpendDeepDive({ data }: { data: Rollup }) {
           {sel && <Detail row={sel} idx={selIdx} total={sorted.length} all={all} data={data} onStep={step} />}
         </div>
       )}
+    </div>
+  );
+}
+
+// ───────────────────────────── table view ─────────────────────────────
+
+type Totals = Pick<RollupItem, "revised" | "spent" | "set_aside" | "overspent" | "available" | "remaining">;
+
+const STATUS_ICON: Record<Status, typeof AlertTriangle> = { over: AlertCircle, pace: AlertTriangle, ok: CheckCircle2 };
+
+function SubItemTable({ rows, totals, scope, sort, onSort }: { rows: Row[]; totals: Totals; scope: string; sort: SortKey; onSort: (s: SortKey) => void }) {
+  const neg = (v: number) => (v < 0 ? "text-neg" : "");
+  const cols: { key: keyof Totals; label: string; cls: (v: number) => string; fmt?: (v: number) => string }[] = [
+    { key: "revised", label: "Revised", cls: () => "" },
+    { key: "spent", label: "Spent", cls: () => "" },
+    { key: "set_aside", label: "Set aside", cls: () => "" },
+    { key: "overspent", label: "Overspent", cls: (v) => (v > 0 ? "text-neg" : "text-dim"), fmt: (v) => (v > 0 ? money(v) : "—") },
+    { key: "available", label: "Available", cls: neg },
+    { key: "remaining", label: "Remaining", cls: neg },
+  ];
+  return (
+    <div className={`${panelCls} p-5`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-[17px] font-bold tracking-tight">{scope} · {rows.length} sub-items</h3>
+          <div className="mt-0.5 text-[12.5px] text-dim">Same slice as the charts, one row per sub-item.</div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[12px] text-dim">Sort by</span>
+          {SORTS.map((s) => <Chip key={s.key} on={sort === s.key} onClick={() => onSort(s.key)}>{s.label}</Chip>)}
+        </div>
+      </div>
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full min-w-[60rem] text-[13px]">
+          <thead>
+            <tr className="border-b border-line text-left text-[11px] font-bold uppercase tracking-[.06em] text-dim">
+              <th className="px-3 pb-2.5 font-bold">Item</th>
+              <th className="px-3 pb-2.5 font-bold">Category</th>
+              <th className="px-3 pb-2.5 font-bold">Status</th>
+              {cols.map((c) => <th key={c.key} className="px-3 pb-2.5 text-right font-bold">{c.label}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const m = STATUS_META[r.status];
+              const Icon = STATUS_ICON[r.status];
+              return (
+                <tr key={r.subcategory_id} className="border-b border-line">
+                  <td className="px-3 py-2.5 font-medium">
+                    <span className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full" style={{ background: sectionColor(r.section) }} />{r.name}</span>
+                  </td>
+                  <td className="px-3 py-2.5 text-dim">{r.section}</td>
+                  <td className="px-3 py-2.5">
+                    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11.5px] font-bold" style={{ background: soft(m.color, 13), color: m.color }}>
+                      <Icon size={12} />{m.label}
+                    </span>
+                  </td>
+                  {cols.map((c) => (
+                    <td key={c.key} className={`num px-3 py-2.5 text-right ${c.cls(r[c.key])}`}>{(c.fmt ?? money)(r[c.key])}</td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr className="font-bold">
+              <td className="px-3 pt-3" colSpan={3}>Total</td>
+              {cols.map((c) => (
+                <td key={c.key} className={`num px-3 pt-3 text-right ${c.cls(totals[c.key])}`}>{(c.fmt ?? money)(totals[c.key])}</td>
+              ))}
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     </div>
   );
 }

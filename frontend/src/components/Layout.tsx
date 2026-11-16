@@ -25,7 +25,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true, tour: "nav-dashboard" },
   { to: "/dashboard/month", label: "Month", icon: CalendarDays, tour: "nav-month" },
-  { to: "/dashboard/rollup", label: "Annual Rollup", icon: TableProperties },
+  { to: "/dashboard/rollup", label: "Analytics", icon: TableProperties },
   { to: "/dashboard/setup", label: "Budget Setup", icon: SlidersHorizontal, tour: "nav-setup" },
   { to: "/dashboard/transactions", label: "Transactions", icon: Receipt, tour: "nav-transactions" },
   { to: "/dashboard/recurring", label: "Recurring", icon: Repeat },
@@ -118,7 +118,7 @@ function YearMonthBar({ mobile = false }: { mobile?: boolean }) {
 /** Per-screen title shown in the mobile header (the body's own h1 is hidden on mobile). */
 const SCREEN_TITLES: Record<string, string> = {
   "/dashboard": "Overview",
-  "/dashboard/rollup": "Reports",
+  "/dashboard/rollup": "Analytics",
   "/dashboard/setup": "Budget Setup",
   "/dashboard/transactions": "Transactions",
   "/dashboard/income": "Income",
@@ -221,7 +221,7 @@ function BottomNav({ onMore, onAdd }: { onMore: () => void; onAdd: () => void })
           <Plus size={26} />
         </span>
       </button>
-      <Item to="/dashboard/rollup" icon={BarChart3} label="Reports" />
+      <Item to="/dashboard/rollup" icon={BarChart3} label="Analytics" />
       <button
         onClick={onMore}
         className="flex flex-1 flex-col items-center gap-[3px]"
